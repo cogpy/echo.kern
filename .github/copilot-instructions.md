@@ -5,8 +5,8 @@
 ## Working Effectively
 
 ### Initial Setup & Dependencies
-- Ensure Python 3 is available: `python3 --version` (tested with Python 3.12.3)
-- Ensure Node.js is available: `node --version` (tested with Node.js v20.19.4)
+- Ensure Python 3 is available: `python3 --version` (minimum 3.6, tested with Python 3.12.3)
+- Ensure Node.js is available: `node --version` (minimum 14.0.0, tested with Node.js v20.19.4)
 - Repository is standalone - **NO BUILD STEP REQUIRED**
 - **NO PACKAGE INSTALLATION NEEDED** - all dependencies are standard library
 
