@@ -163,8 +163,11 @@ After making any changes, **ALWAYS test the following user scenarios**:
    ```bash
    # Try alternative port
    python3 -m http.server 8080
-   # Or check what's using port 8000
-   lsof -i :8000
+   # Or check what's using port 8000 (choose the command for your OS)
+   lsof -i :8000                # macOS/Linux (if lsof is available)
+   ss -tuln | grep 8000         # Linux (if ss is available)
+   netstat -an | grep 8000      # macOS/Linux (if netstat is available)
+   netstat -ano | find "8000"   # Windows (Command Prompt)
    ```
 
 2. **JavaScript errors in browser**:
