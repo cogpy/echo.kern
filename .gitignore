@@ -1,0 +1,28 @@
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Generated files from examples
+dtesn_config.h
+dtesn.config
+dtesn_spec.md
+
+# Backup files
+*_backup.py
+
+# Build artifacts
+*.o
+*.a
+*.so
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
