@@ -84,6 +84,63 @@ class DTESNConfig:
     esn_parameters: ESNParameters = field(default_factory=ESNParameters)
     timing_constraints: TimingConstraints = field(default_factory=TimingConstraints)
     memory_layout: MemoryLayout = field(default_factory=MemoryLayout)
+    
+    def to_psystem_hierarchy(self) -> 'PSystemMembraneHierarchy':
+        """Convert DTESN config to P-System membrane hierarchy"""
+        try:
+            from psystem_membranes import PSystemMembraneHierarchy, MembraneType
+            
+            # Map membrane types
+            type_mapping = {
+                "root": MembraneType.ROOT,
+                "trunk": MembraneType.TRUNK,
+                "branch": MembraneType.BRANCH,
+                "leaf": MembraneType.LEAF,
+                "terminal": MembraneType.TERMINAL
+            }
+            
+            system = PSystemMembraneHierarchy(f"DTESN_{self.name}")
+            
+            # Create membranes following the hierarchy
+            membrane_ids = {}
+            
+            # Sort by level to ensure parents are created before children
+            sorted_levels = sorted(self.membrane_hierarchy, key=lambda x: x.level)
+            
+            for level_config in sorted_levels:
+                membrane_type = type_mapping.get(level_config.type, MembraneType.ELEMENTARY)
+                
+                # Create multiple membranes if count > 1
+                for i in range(level_config.count):
+                    # Determine parent
+                    parent_id = None
+                    if level_config.level > 0:
+                        # Find parent from previous level
+                        parent_level = level_config.level - 1
+                        parent_key = f"{parent_level}_0"  # Use first parent for simplicity
+                        parent_id = membrane_ids.get(parent_key)
+                    
+                    # Create membrane
+                    membrane_id = system.create_membrane(
+                        membrane_type=membrane_type,
+                        label=f"{level_config.type}_level_{level_config.level}_{i}",
+                        parent_id=parent_id,
+                        neuron_count=level_config.neurons
+                    )
+                    
+                    # Store membrane ID for children to reference
+                    membrane_ids[f"{level_config.level}_{i}"] = membrane_id
+                    
+                    # Set DTESN-specific properties
+                    membrane = system.get_membrane(membrane_id)
+                    if membrane:
+                        membrane.spectral_radius = self.esn_parameters.spectral_radius
+                        membrane.connectivity = self.esn_parameters.connectivity
+            
+            return system
+            
+        except ImportError:
+            raise ImportError("P-System membranes module not available")
 
 class DTESNParser:
     """Parser for DTESN specification files"""
@@ -547,6 +604,85 @@ def enumerate_oeis_a000081(num_terms: int, verbose: bool = False):
                 print(f"  {n} nodes -> {actual} trees (expected {expected}): {'✅' if valid else '❌'}")
 
 
+def generate_psystem_from_dtesn(dtesn_file: str, verbose: bool = False) -> bool:
+    """Generate P-System membrane hierarchy from DTESN specification"""
+    try:
+        compiler = DTESNCompiler()
+        config = compiler.parser.parse_file(dtesn_file)
+        
+        if verbose:
+            print(f"Parsing DTESN specification: {dtesn_file}")
+            print(f"Configuration: {config.name} v{config.version}")
+        
+        # Validate DTESN config first
+        is_valid, errors = compiler.validator.validate_membrane_hierarchy(config.membrane_hierarchy, config.max_depth)
+        if not is_valid:
+            print(f"❌ DTESN configuration validation failed:")
+            for error in errors:
+                print(f"  {error}")
+            return False
+        
+        # Convert to P-System hierarchy
+        try:
+            psystem = config.to_psystem_hierarchy()
+            
+            print(f"✅ P-System membrane hierarchy generated successfully!")
+            print(f"\n{psystem}")
+            
+            # Display hierarchy tree
+            print(f"\nMembrane Hierarchy:")
+            tree = psystem.get_membrane_tree()
+            
+            def print_tree(node, indent=0):
+                spaces = "  " * indent
+                print(f"{spaces}- {node['label']} ({node['type']}) [neurons: {node['neuron_count']}, objects: {node['objects']}]")
+                for child in node['children']:
+                    print_tree(child, indent + 1)
+            
+            if tree:
+                print_tree(tree)
+            
+            # Display system statistics
+            if verbose:
+                print(f"\nP-System Statistics:")
+                stats = psystem.get_system_stats()
+                for key, value in stats.items():
+                    print(f"  {key}: {value}")
+            
+            # Validate OEIS A000081 compliance
+            print(f"\nOEIS A000081 Compliance Validation:")
+            is_oeis_valid, oeis_errors = psystem.validate_oeis_a000081_compliance()
+            if is_oeis_valid:
+                print(f"  ✅ Hierarchy follows OEIS A000081 enumeration")
+            else:
+                print(f"  ❌ OEIS A000081 validation failed:")
+                for error in oeis_errors:
+                    print(f"    {error}")
+            
+            # Demonstrate evolution
+            if verbose:
+                print(f"\nEvolution Demonstration:")
+                for step in range(3):
+                    active = psystem.evolve_system()
+                    print(f"  Step {step + 1}: Active={active}, Rules applied={psystem.rule_applications}")
+                    if not active:
+                        break
+            
+            return True
+            
+        except ImportError as e:
+            print(f"❌ P-System module not available: {e}")
+            print("Install P-System membrane computing support to use this feature")
+            return False
+    
+    except Exception as e:
+        print(f"❌ P-System generation failed: {e}")
+        if verbose:
+            import traceback
+            traceback.print_exc()
+        return False
+
+
 def main():
     """Main entry point for the DTESN compiler"""
     parser = argparse.ArgumentParser(
@@ -555,7 +691,7 @@ def main():
         epilog=__doc__
     )
     
-    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum'],
+    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'psystem'],
                        help='Command to execute')
     parser.add_argument('file', nargs='?', help='Input specification file')
     parser.add_argument('--output', '-o', help='Output file')
@@ -573,6 +709,12 @@ def main():
     if args.command == 'oeis-enum':
         enumerate_oeis_a000081(args.terms, args.verbose)
         return True
+    
+    if args.command == 'psystem':
+        if not args.file:
+            print("Error: Input file required for P-System generation")
+            return False
+        return generate_psystem_from_dtesn(args.file, args.verbose)
     
     if not args.file:
         print("Error: Input file required for compile and validate commands")
