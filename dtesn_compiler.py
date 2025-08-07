@@ -32,7 +32,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Import the enhanced OEIS A000081 enumerator
+# Import the enhanced OEIS A000081 enumerator and B-Series classifier
 try:
     from oeis_a000081_enumerator import create_enhanced_validator, validate_membrane_hierarchy_enhanced
     _oeis_enumerator = create_enhanced_validator()
@@ -42,6 +42,15 @@ except ImportError:
     # Fallback to hardcoded values if enumerator module is not available
     OEIS_A000081 = [0, 1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766, 12486, 32973]
     _USE_ENHANCED_ENUMERATOR = False
+
+# Import B-Series tree classification
+try:
+    from bseries_tree_classifier import create_bseries_classifier
+    _bseries_classifier = create_bseries_classifier()
+    _USE_BSERIES_CLASSIFIER = True
+except ImportError:
+    _bseries_classifier = None
+    _USE_BSERIES_CLASSIFIER = False
 
 class OutputFormat(Enum):
     C_HEADER = "c_header"
@@ -302,12 +311,81 @@ class OEIS_A000081_Validator:
         else:
             return len(OEIS_A000081) - 1
 
+class BSeriesValidator:
+    """Validator for B-Series tree classification in DTESN specifications"""
+    
+    def __init__(self):
+        """Initialize B-Series validator"""
+        self.use_bseries = _USE_BSERIES_CLASSIFIER
+        if self.use_bseries:
+            self.classifier = _bseries_classifier
+    
+    def validate_bseries_config(self, config: DTESNConfig) -> Tuple[bool, List[str]]:
+        """Validate B-Series configuration for a DTESN spec"""
+        if not self.use_bseries:
+            return True, ["B-Series classifier not available, skipping validation"]
+        
+        errors = []
+        
+        # Validate that B-Series trees can be classified for the max depth
+        max_order = config.max_depth
+        
+        for order in range(1, max_order + 1):
+            trees = self.classifier.get_trees_by_order(order)
+            if len(trees) == 0:
+                errors.append(f"No B-Series trees classified for order {order}")
+            else:
+                # Validate that trees have proper coefficients and differentials
+                for tree in trees:
+                    if tree.coefficient.coefficient_value <= 0:
+                        errors.append(f"Tree {tree.tree_id} has invalid coefficient")
+                    if not tree.elementary_diff.expression:
+                        errors.append(f"Tree {tree.tree_id} has empty differential expression")
+        
+        # Validate computational costs are within timing constraints
+        costs = self.classifier.get_computational_cost_summary()
+        bseries_max_us = config.timing_constraints.bseries_computation_max_us
+        
+        for order, total_cost in costs.items():
+            if order <= max_order:
+                # Estimate if computation can complete within time constraint
+                # (This is a simplified heuristic)
+                estimated_time_us = total_cost * 10  # 10μs per unit cost
+                if estimated_time_us > bseries_max_us:
+                    errors.append(f"Order {order} B-Series computation may exceed "
+                                f"{bseries_max_us}μs constraint (estimated: {estimated_time_us:.1f}μs)")
+        
+        return len(errors) == 0, errors
+    
+    def get_bseries_summary(self, max_order: int) -> Dict[str, Any]:
+        """Get summary of B-Series classification for given max order"""
+        if not self.use_bseries:
+            return {"status": "B-Series classifier not available"}
+        
+        summary = {
+            "total_trees": 0,
+            "orders": {},
+            "structure_types": self.classifier.get_classification_statistics(),
+            "computational_costs": self.classifier.get_computational_cost_summary()
+        }
+        
+        for order in range(1, max_order + 1):
+            trees = self.classifier.get_trees_by_order(order)
+            summary["orders"][order] = {
+                "count": len(trees),
+                "tree_ids": [tree.tree_id for tree in trees]
+            }
+            summary["total_trees"] += len(trees)
+        
+        return summary
+
 class DTESNCompiler:
     """Compiler for DTESN specifications"""
     
     def __init__(self):
         self.parser = DTESNParser()
         self.validator = OEIS_A000081_Validator()
+        self.bseries_validator = BSeriesValidator()
     
     def compile_file(self, input_file: str, output_file: str = None, format: OutputFormat = OutputFormat.C_HEADER, verbose: bool = False) -> bool:
         """Compile a DTESN specification file"""
@@ -325,12 +403,32 @@ class DTESNCompiler:
             is_valid, errors = self.validator.validate_membrane_hierarchy(config.membrane_hierarchy, config.max_depth)
             
             if not is_valid:
-                print("VALIDATION ERRORS:")
+                print("MEMBRANE HIERARCHY VALIDATION ERRORS:")
                 for error in errors:
                     print(f"  ❌ {error}")
                 return False
             elif verbose:
                 print("✅ OEIS A000081 validation passed")
+            
+            # Validate B-Series configuration
+            bseries_valid, bseries_errors = self.bseries_validator.validate_bseries_config(config)
+            
+            if not bseries_valid:
+                print("B-SERIES VALIDATION ERRORS:")
+                for error in bseries_errors:
+                    print(f"  ❌ {error}")
+                return False
+            elif verbose:
+                print("✅ B-Series tree classification validation passed")
+            
+            # Display B-Series summary if verbose
+            if verbose:
+                bseries_summary = self.bseries_validator.get_bseries_summary(config.max_depth)
+                if "status" not in bseries_summary:
+                    print(f"B-Series Summary:")
+                    print(f"  Total classified trees: {bseries_summary['total_trees']}")
+                    for order, info in bseries_summary['orders'].items():
+                        print(f"    Order {order}: {info['count']} trees")
             
             # Generate output
             if format == OutputFormat.C_HEADER:
@@ -548,6 +646,84 @@ def enumerate_oeis_a000081(num_terms: int, verbose: bool = False):
                 print(f"  {n} nodes -> {actual} trees (expected {expected}): {'✅' if valid else '❌'}")
 
 
+def display_bseries_info(max_order: int = 5, verbose: bool = False):
+    """Display B-Series tree classification information"""
+    print("B-Series Tree Classification Information")
+    print("=" * 50)
+    
+    if not _USE_BSERIES_CLASSIFIER:
+        print("❌ B-Series classifier not available")
+        return
+    
+    classifier = _bseries_classifier
+    
+    # Display basic statistics
+    stats = classifier.get_classification_statistics()
+    print(f"Classification Statistics:")
+    print(f"  Total trees classified: {stats['total_trees']}")
+    print(f"  Maximum order: {stats['max_order']}")
+    print(f"  Structure types:")
+    print(f"    Single nodes: {stats['single_node_count']}")
+    print(f"    Linear chains: {stats['linear_chain_count']}")
+    print(f"    Star graphs: {stats['star_graph_count']}")
+    print(f"    Binary trees: {stats['binary_tree_count']}")
+    print(f"    General trees: {stats['general_tree_count']}")
+    print()
+    
+    # Display trees by order
+    print(f"B-Series Trees by Order (showing up to order {max_order}):")
+    for order in range(1, min(max_order + 1, stats['max_order'] + 1)):
+        trees = classifier.get_trees_by_order(order)
+        print(f"\n  Order {order}: {len(trees)} trees")
+        
+        for tree in trees:
+            coeff = tree.coefficient.coefficient_value
+            expr = tree.elementary_diff.expression
+            cost = tree.elementary_diff.computational_cost
+            
+            if verbose:
+                print(f"    Tree {tree.tree_id:2d}: α={coeff:8.6f} ({tree.coefficient.computational_formula:>6}), "
+                      f"F(τ)={expr:<25}, cost={cost:4.1f}, sym={tree.symmetry_factor}")
+            else:
+                print(f"    Tree {tree.tree_id:2d}: α={coeff:8.6f}, F(τ)={expr}")
+    
+    # Display computational costs
+    print(f"\nComputational Cost Summary:")
+    costs = classifier.get_computational_cost_summary()
+    total_cost = 0
+    for order in range(1, min(max_order + 1, stats['max_order'] + 1)):
+        if order in costs:
+            cost = costs[order]
+            total_cost += cost
+            print(f"  Order {order}: {cost:6.1f} units")
+    print(f"  Total:   {total_cost:6.1f} units")
+    
+    # OEIS A000081 validation
+    print(f"\nOEIS A000081 Validation:")
+    is_valid, errors = classifier.validate_against_oeis_a000081()
+    if is_valid:
+        print("  ✅ All tree counts match OEIS A000081")
+    else:
+        print("  ❌ Validation errors:")
+        for error in errors:
+            print(f"    {error}")
+    
+    if verbose:
+        print(f"\nDetailed B-Series Information:")
+        print(f"- B-Series formula: y(h) = y₀ + h ∑ α(τ) F(τ)(y₀)")
+        print(f"- τ represents rooted trees from OEIS A000081")
+        print(f"- α(τ) are B-Series coefficients (shown above)")
+        print(f"- F(τ) are elementary differentials (expressions shown)")
+        print(f"- Computational cost reflects relative complexity")
+        print(f"- Symmetry factor accounts for tree automorphisms")
+        
+        print(f"\nIntegration with DTESN:")
+        print(f"- Trees provide structure for differential operators")
+        print(f"- Coefficients determine operator weights")
+        print(f"- Elementary differentials map to computational kernels")
+        print(f"- Real-time constraints limit usable tree orders")
+
+
 def main():
     """Main entry point for the DTESN compiler"""
     parser = argparse.ArgumentParser(
@@ -556,7 +732,11 @@ def main():
         epilog=__doc__
     )
     
+#<<<<<<< copilot/fix-8
+    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'bseries-info'],
+#=======
     parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'validate-memory'],
+#>>>>>>> main
                        help='Command to execute')
     parser.add_argument('file', nargs='?', help='Input specification file')
     parser.add_argument('--output', '-o', help='Output file')
@@ -575,6 +755,13 @@ def main():
         enumerate_oeis_a000081(args.terms, args.verbose)
         return True
     
+#<<<<<<< copilot/fix-8
+    if args.command == 'bseries-info':
+        display_bseries_info(args.terms, args.verbose)
+        return True
+    
+    if not args.file:
+#=======
     if args.command == 'validate-memory':
         try:
             # Import and use memory layout validator
@@ -610,6 +797,7 @@ def main():
             return False
     
     if not args.file and args.command in ['compile', 'validate']:
+#>>>>>>> main
         print("Error: Input file required for compile and validate commands")
         return False
     
