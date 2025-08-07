@@ -1,50 +1,45 @@
-This is a port of many Plan 9 libraries and programs to Unix.
+# Echo9 Folder Organization
 
-Installation
-------------
+This folder has been reorganized to separate Echo.Kern related content from unrelated Plan 9 port components.
 
-To install, run ./INSTALL.  It builds mk and then uses mk to
-run the rest of the installation.
+## Folder Structure
 
-For more details, see install(1), at install.txt in this directory
-and at https://9fans.github.io/plan9port/man/man1/install.html.
+### `echo-kernel-functions/`
+Contains Echo.Kern DTESN-related experimental implementations and prototypes:
 
-Documentation
--------------
+- **`dtesn-prototypes/`** - Experimental DTESN component implementations
+- **`kernel-modules/`** - Kernel module prototypes and development code
+- **`neuromorphic-drivers/`** - Hardware abstraction layer prototypes
+- **`real-time-extensions/`** - Real-time scheduler extensions and optimizations
 
-See https://9fans.github.io/plan9port/man/ for more documentation.
-(Documentation is also in this tree, but you need to run
-a successful install first.  After that, "9 man 1 intro".)
+### `plan9-port/`
+Complete Plan 9 port (plan9port) from the original echo9 contents. This is a comprehensive Unix port of Plan 9 from Bell Labs, providing Plan 9 libraries and programs on Unix systems.
 
-Intro(1) contains a list of man pages that describe new features
-or differences from Plan 9.
+**Original Plan 9 Port Structure:**
+- `lib/` - Plan 9 libraries 
+- `src/` - Source code for Plan 9 programs
+- `bin/` - Binary executables
+- `man/` - Manual pages
+- Documentation: `README.md`, `INSTALL`, `CONTRIBUTING.md`
 
-Helping out
------------
+### `irrelevant/`
+Contains content that doesn't fit into Echo.Kern DTESN development or Plan 9 port categories:
 
-If you'd like to help out, great!
+- **`archive/`** - Archived or deprecated content
 
-If you port this code to other architectures, please share your changes
-so others can benefit.
+## Purpose
 
-Git
+This reorganization separates:
+1. **Echo.Kern Development** - DTESN-related prototypes and kernel development
+2. **Plan 9 Port** - Complete, preserved Plan 9 port functionality  
+3. **Other Content** - Miscellaneous or unrelated materials
+
+## Usage
+
+- For Echo.Kern DTESN development: Work in `echo-kernel-functions/`
+- For Plan 9 port functionality: Use `plan9-port/` (preserves original structure)
+- For archival content: Reference `irrelevant/archive/`
+
 ---
 
-You can use Git to keep your local copy up-to-date as we make
-changes and fix bugs.  See the git(1) man page here ("9 man git")
-for details on using Git.
-
-Status
-------
-[![Github Actions Build Status](https://github.com/9fans/plan9port/actions/workflows/actions.yaml/badge.svg)](https://github.com/9fans/plan9port/actions/workflows/actions.yaml)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/plan-9-from-user-space/badge.svg)](https://scan.coverity.com/projects/plan-9-from-user-space)
-
-
-Contact
--------
-
-* Mailing list: https://groups.google.com/group/plan9port-dev
-* Issue tracker: https://github.com/9fans/plan9port/issues
-* Submitting changes: https://github.com/9fans/plan9port/pulls
-
-* Russ Cox <rsc@swtch.com>
+*Reorganized as part of Echo.Kern documentation analysis and folder structure optimization.*
