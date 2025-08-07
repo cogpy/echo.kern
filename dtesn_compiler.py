@@ -15,6 +15,7 @@ Commands:
     validate <file>    - Validate specification against OEIS A000081
     generate-docs      - Generate static documentation (legacy mode)
     oeis-enum          - Enumerate OEIS A000081 sequence (standalone tool)
+    validate-memory    - Validate DTESN memory layout architecture
     
 Options:
     --output <file>    - Output file for compilation results
@@ -555,7 +556,7 @@ def main():
         epilog=__doc__
     )
     
-    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum'],
+    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'validate-memory'],
                        help='Command to execute')
     parser.add_argument('file', nargs='?', help='Input specification file')
     parser.add_argument('--output', '-o', help='Output file')
@@ -574,7 +575,41 @@ def main():
         enumerate_oeis_a000081(args.terms, args.verbose)
         return True
     
-    if not args.file:
+    if args.command == 'validate-memory':
+        try:
+            # Import and use memory layout validator
+            from memory_layout_validator import create_memory_validator
+            
+            validator = create_memory_validator()
+            is_valid, errors = validator.validate_full_layout()
+            
+            if is_valid:
+                print("✅ DTESN memory layout validation passed")
+                if args.verbose:
+                    summary = validator.get_memory_layout_summary()
+                    print(f"\nMemory Regions ({len(summary['regions'])}):")
+                    for region in summary['regions']:
+                        print(f"  {region['name']:20} {region['start']} - {region['end']} ({region['size_gb']:.1f} GB)")
+                    
+                    print(f"\nMembrane Levels ({len(summary['membrane_levels'])}):")
+                    for level in summary['membrane_levels']:
+                        print(f"  Level {level['level']}: {level['count']:2d} membranes at {level['base_addr']} ({level['individual_size_mb']:.1f} MB each)")
+                
+                return True
+            else:
+                print("❌ DTESN memory layout validation failed:")
+                for error in errors:
+                    print(f"  {error}")
+                return False
+                
+        except ImportError:
+            print("❌ Memory layout validator not available")
+            return False
+        except Exception as e:
+            print(f"❌ Memory validation failed: {e}")
+            return False
+    
+    if not args.file and args.command in ['compile', 'validate']:
         print("Error: Input file required for compile and validate commands")
         return False
     
