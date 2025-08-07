@@ -1,0 +1,31 @@
+{
+  "framework_version": "1.0.0",
+  "start_time": 1754585092.6756017,
+  "config": {
+    "run_performance_tests": true,
+    "run_interactive_tests": false,
+    "run_integration_tests": false,
+    "run_monitoring_test": false,
+    "performance_runs": 10,
+    "monitoring_duration": 10,
+    "monitoring_interval": 100,
+    "base_url": "http://localhost:8000",
+    "performance_output": null,
+    "interactive_output": null,
+    "monitoring_output": null
+  },
+  "tests": {
+    "performance": {
+      "success": false,
+      "type": "dtesn_performance_suite"
+    }
+  },
+  "summary": {
+    "overall_success": false,
+    "total_test_categories": 1,
+    "passed_categories": 0,
+    "pass_rate": 0.0,
+    "end_time": 1754585093.5960312,
+    "total_duration": 0.9204299449920654
+  }
+}
