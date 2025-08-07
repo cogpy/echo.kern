@@ -1,0 +1,5 @@
+#!/bin/bash
+input=$(cat ./forms/Calculator/Text1/text)
+result=$(echo "$input * 2" | bc 2>/dev/null || echo 0)
+echo "$result" > ./forms/Calculator/Text2/text
+echo "Calculated: $input * 2 = $result"
