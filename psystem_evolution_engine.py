@@ -131,21 +131,39 @@ class EvolutionAnalytics:
     
     def get_performance_trend(self, metric: str, window: int = 10) -> float:
         """Get performance trend for a specific metric"""
-        with self._lock:
-            if metric not in self.performance_trends:
-                return 0.0
-            
-            values = list(self.performance_trends[metric])
-            if len(values) < window:
-                return 0.0
-            
-            # Calculate trend (positive = improving, negative = degrading)
-            recent = statistics.mean(values[-window//2:])
-            earlier = statistics.mean(values[-window:-window//2])
-            
-            if earlier == 0:
-                return 0.0
-            return (recent - earlier) / earlier
+        try:
+            with self._lock:
+                if metric not in self.performance_trends:
+                    return 0.0
+                
+                values = list(self.performance_trends[metric])
+                if len(values) < window:
+                    return 0.0
+                
+                # Ensure we have enough values for comparison
+                if len(values) < 4:
+                    return 0.0
+                
+                # Calculate trend (positive = improving, negative = degrading)
+                half_window = max(2, window // 2)
+                if len(values) < half_window * 2:
+                    return 0.0
+                
+                recent_values = values[-half_window:]
+                earlier_values = values[-half_window*2:-half_window]
+                
+                if not recent_values or not earlier_values:
+                    return 0.0
+                
+                recent = statistics.mean(recent_values)
+                earlier = statistics.mean(earlier_values)
+                
+                if earlier == 0:
+                    return 0.0
+                return (recent - earlier) / earlier
+        except Exception:
+            # Fallback to prevent infinite loops
+            return 0.0
     
     def get_current_performance(self) -> Dict[str, Any]:
         """Get current performance statistics"""
@@ -346,13 +364,26 @@ class AdaptiveEvolutionStrategy(EvolutionStrategyBase):
         self.current_strategy = EvolutionStrategy.SYNCHRONOUS
         self.switch_threshold = config.adaptive_threshold
         self.evaluation_window = 10
+        self.last_switch_time = time.time()
+        self.min_switch_interval = 5.0  # Minimum seconds between switches
     
     def evolve_system(self, system: PSystemMembraneHierarchy) -> EvolutionMetrics:
-        # Check if we should switch strategies
-        if len(self.analytics.metrics_history) >= self.evaluation_window:
-            current_performance = self.analytics.get_current_performance()
-            if current_performance.get('avg_performance_score', 1.0) < self.switch_threshold:
-                self._switch_strategy()
+        # Check if we should switch strategies (with safeguards)
+        current_time = time.time()
+        if (len(self.analytics.metrics_history) >= self.evaluation_window and 
+            current_time - self.last_switch_time > self.min_switch_interval):
+            
+            try:
+                # Simple performance check without complex statistics
+                recent_metrics = list(self.analytics.metrics_history)[-5:]
+                if recent_metrics:
+                    avg_score = sum(m.performance_score for m in recent_metrics) / len(recent_metrics)
+                    if avg_score < self.switch_threshold:
+                        self._switch_strategy()
+                        self.last_switch_time = current_time
+            except Exception:
+                # If anything goes wrong, just continue with current strategy
+                pass
         
         # Execute current strategy
         strategy = self.strategies[self.current_strategy]
@@ -475,26 +506,29 @@ class PSystemEvolutionEngine:
     
     def optimize_configuration(self) -> Dict[str, Any]:
         """Automatically optimize configuration based on performance history"""
-        performance = self.analytics.get_current_performance()
-        recommendations = {}
-        
-        avg_time = performance.get('avg_evolution_time_us', 0)
-        
-        # Recommend strategy changes
-        if avg_time > self.config.max_evolution_time_us * 0.8:
-            if self.current_strategy == EvolutionStrategy.SYNCHRONOUS:
-                recommendations['strategy'] = EvolutionStrategy.ASYNCHRONOUS
-            elif self.config.max_parallel_workers < multiprocessing.cpu_count():
-                recommendations['max_parallel_workers'] = min(
-                    multiprocessing.cpu_count(), 
-                    self.config.max_parallel_workers + 2
-                )
-        
-        # Recommend target time adjustments
-        if performance.get('evolution_trend', 0) < -0.1:  # Performance degrading
-            recommendations['target_evolution_time_us'] = self.config.target_evolution_time_us * 1.2
-        
-        return recommendations
+        try:
+            performance = self.analytics.get_current_performance()
+            recommendations = {}
+            
+            avg_time = performance.get('avg_evolution_time_us', 0)
+            
+            # Simple recommendations without complex analysis
+            if avg_time > self.config.max_evolution_time_us * 0.8:
+                if self.current_strategy == EvolutionStrategy.SYNCHRONOUS:
+                    recommendations['strategy'] = EvolutionStrategy.ASYNCHRONOUS.value
+                elif self.config.max_parallel_workers < multiprocessing.cpu_count():
+                    recommendations['max_parallel_workers'] = min(
+                        multiprocessing.cpu_count(), 
+                        self.config.max_parallel_workers + 2
+                    )
+            
+            # Recommend target time adjustments
+            if avg_time > self.config.target_evolution_time_us * 1.5:
+                recommendations['target_evolution_time_us'] = self.config.target_evolution_time_us * 1.2
+            
+            return recommendations
+        except Exception:
+            return {}
     
     def _log_performance_profile(self, metrics: EvolutionMetrics) -> None:
         """Log detailed performance profile"""
