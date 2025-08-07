@@ -858,7 +858,6 @@ def display_bseries_info(max_order: int = 5, verbose: bool = False):
         print(f"- Coefficients determine operator weights")
         print(f"- Elementary differentials map to computational kernels")
         print(f"- Real-time constraints limit usable tree orders")
-#>>>>>>> main
 
 
 def main():
@@ -869,15 +868,7 @@ def main():
         epilog=__doc__
     )
     
-#<<<<<<< copilot/fix-7
-    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'psystem'],
-#=======
-#<<<<<<< copilot/fix-8
-    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'bseries-info'],
-#=======
-    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'validate-memory'],
-#>>>>>>> main
-#>>>>>>> main
+    parser.add_argument('command', choices=['compile', 'validate', 'generate-docs', 'oeis-enum', 'bseries-info', 'psystem', 'validate-memory'],
                        help='Command to execute')
     parser.add_argument('file', nargs='?', help='Input specification file')
     parser.add_argument('--output', '-o', help='Output file')
@@ -896,21 +887,16 @@ def main():
         enumerate_oeis_a000081(args.terms, args.verbose)
         return True
     
-#<<<<<<< copilot/fix-7
+    if args.command == 'bseries-info':
+        display_bseries_info(args.terms, args.verbose)
+        return True
+    
     if args.command == 'psystem':
         if not args.file:
             print("Error: Input file required for P-System generation")
             return False
         return generate_psystem_from_dtesn(args.file, args.verbose)
-#=======
-#<<<<<<< copilot/fix-8
-    if args.command == 'bseries-info':
-        display_bseries_info(args.terms, args.verbose)
-        return True
-#>>>>>>> main
     
-    if not args.file:
-#=======
     if args.command == 'validate-memory':
         try:
             # Import and use memory layout validator
@@ -946,7 +932,6 @@ def main():
             return False
     
     if not args.file and args.command in ['compile', 'validate']:
-#>>>>>>> main
         print("Error: Input file required for compile and validate commands")
         return False
     
