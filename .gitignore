@@ -33,4 +33,4 @@ vb9/src/libvb9.a
 vb9/src/forms/
 vb9/examples/hello
 vb9/examples/texteditor
-vb9/examples/filemanager
+vb9/examples/filemanagertest_dtesn_memory
