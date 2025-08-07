@@ -26,3 +26,11 @@ dtesn_spec.md
 # OS files
 .DS_Store
 Thumbs.db
+
+# VB9 build artifacts
+vb9/src/vb9demo
+vb9/src/libvb9.a
+vb9/src/forms/
+vb9/examples/hello
+vb9/examples/texteditor
+vb9/examples/filemanager
