@@ -10,6 +10,7 @@
 #define _GNU_SOURCE
 #define _POSIX_C_SOURCE 199309L
 #include "include/dtesn/bseries.h"
+#include "include/dtesn/memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

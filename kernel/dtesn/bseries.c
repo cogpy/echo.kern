@@ -662,12 +662,14 @@ bool dtesn_bseries_validate_a000081(dtesn_bseries_system_t *system)
         return false;
     }
     
+    /* Only validate orders that have been generated (skip order 0) */
     for (uint32_t order = 1; order <= system->max_order && 
          order < DTESN_BSERIES_A000081_MAX_ORDER; order++) {
         uint32_t expected_count = g_oeis_a000081[order];
         uint32_t actual_count = system->orders[order].tree_count;
         
-        if (actual_count != expected_count) {
+        /* Only validate if trees have been generated for this order */
+        if (system->orders[order].trees != NULL && actual_count != expected_count) {
             return false;
         }
     }

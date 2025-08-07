@@ -32,8 +32,8 @@ typedef struct {
     int result;
 } bseries_vector_worker_t;
 
-/* External declarations from bseries.c */
-extern uint64_t get_timestamp_ns(void);
+/* OEIS A000081 sequence for validation */
+static const uint32_t g_oeis_a000081[] = DTESN_BSERIES_A000081_SEQUENCE;
 
 /* Internal function declarations */
 static void *vector_worker_thread(void *arg);
@@ -42,9 +42,10 @@ static int process_tree_batch(dtesn_bseries_tree_t **trees, uint32_t start_idx,
                              double *computational_costs);
 static int optimize_vector_layout(dtesn_bseries_vector_op_t *vector_op);
 static double estimate_computational_cost(dtesn_bseries_tree_t *tree);
+static uint64_t get_timestamp_ns(void);
 
 /**
- * Get high-precision timestamp (forward declaration from bseries.c)
+ * Get high-precision timestamp
  */
 static uint64_t get_timestamp_ns(void)
 {
