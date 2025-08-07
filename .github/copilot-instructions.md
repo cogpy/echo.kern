@@ -10,6 +10,17 @@
 - Repository is standalone - **NO BUILD STEP REQUIRED**
 - **NO PACKAGE INSTALLATION NEEDED** - all dependencies are standard library
 
+### **Optional Dependencies for Advanced Testing**
+```bash
+# Optional: For ESN reservoir tests (not required for basic functionality)
+pip install numpy scipy  # Only install if you need test_esn_reservoir.py
+
+# Optional: For diagram generation (mentioned in Makefile)
+npm install -g @mermaid-js/mermaid-cli
+npm install -g @plantuml/plantuml
+```
+**NOTE**: The core application works completely without these optional dependencies.
+
 ### Core Application Components
 1. **Interactive Web Application**: Deep Tree Echo visualization system
    - `index.html` - Main application page (13,221 bytes)
@@ -38,8 +49,9 @@ npx http-server -p 8000
 # Generate technical specifications (fast execution)
 python3 echo_kernel_spec.py
 ```
-- **Execution time**: < 0.02 seconds
+- **Execution time**: ~0.08 seconds (validated)
 - **Output**: Creates/updates `echo_kernel_specification.md`
+- **NEVER CANCEL**: Fast command, but let it complete
 
 ### Validation & Testing
 
@@ -48,18 +60,21 @@ python3 echo_kernel_spec.py
    ```bash
    curl -I localhost:8000
    # Expected: HTTP/1.0 200 OK, Content-type: text/html
+   # **Timeout**: 30 seconds (network dependent)
    ```
 
 2. **JavaScript Syntax Validation**:
    ```bash
    node -c app.js
    # Expected: No output (success), exit code 0
+   # **Timeout**: 10 seconds
    ```
 
 3. **Python Script Execution**:
    ```bash
    time python3 echo_kernel_spec.py
-   # Expected: Success message, real time < 0.1s
+   # Expected: Success message, real time ~0.08s
+   # **Timeout**: 30 seconds
    ```
 
 4. **File Integrity Check**:
@@ -68,7 +83,41 @@ python3 echo_kernel_spec.py
    curl -s localhost:8000/app.js | wc -l  # Should return 703
    curl -s localhost:8000/style.css | wc -l  # Should return 1314+
    curl -s localhost:8000 | grep -q "Deep Tree Echo"  # Should find title
+   # **Timeout**: 60 seconds per command
    ```
+
+#### **Testing Framework Validation**
+Run the comprehensive test suite to validate functionality:
+```bash
+# OEIS enumeration tests - NEVER CANCEL
+python3 test_oeis_a000081.py
+# Expected: 7/7 tests passed, ~1-3 seconds
+
+# P-System membrane tests - NEVER CANCEL  
+python3 test_psystem_membranes.py
+# Expected: 35/35 tests passed, ~5-10 seconds
+
+# Memory layout validation - NEVER CANCEL
+python3 test_memory_layout_validator.py  
+# Expected: 15/15 tests passed, ~2-5 seconds
+
+# Quick validation suite - NEVER CANCEL
+make test-quick
+# Expected: All validations pass, ~3-5 seconds
+
+# Full project validation - NEVER CANCEL, timeout 10 minutes
+make validate
+# Expected: Project validation complete, ~30-60 seconds
+
+# Performance benchmarks - NEVER CANCEL, timeout 10 minutes
+make test-performance  
+# Expected: Detailed performance report, ~1-2 seconds
+# Note: Some performance targets may not be met in development phase
+
+# Code linting - NEVER CANCEL
+make lint
+# Expected: All syntax valid, ~2-5 seconds
+```
 
 #### **CRITICAL: Manual User Scenario Testing**
 After making any changes, **ALWAYS test the following user scenarios**:
@@ -108,11 +157,14 @@ After making any changes, **ALWAYS test the following user scenarios**:
    - Check that all interactive elements remain functional
 
 #### **Performance Expectations**
-- **Server startup**: < 1 second
-- **Page load time**: < 2 seconds (dependent on browser)
-- **JavaScript execution**: Immediate (modern browsers)
-- **Interactive response**: < 100ms for user actions
-- **Python script**: < 0.02 seconds execution time
+- **Server startup**: Instant (<1 second)
+- **Page load time**: <2 seconds (dependent on browser)
+- **JavaScript execution**: Immediate (modern browsers) 
+- **Interactive response**: <100ms for user actions
+- **Python script**: ~0.08 seconds execution time (validated)
+- **Test suite execution**: 1-10 seconds per test file
+- **Performance benchmarks**: ~1-2 seconds for full suite
+- **Full validation**: 30-60 seconds for make validate
 
 #### **External Dependencies**
 - **ONE EXTERNAL FONT**: `https://r2cdn.perplexity.ai/fonts/FKGroteskNeue.woff2`
@@ -187,6 +239,23 @@ After making any changes, **ALWAYS test the following user scenarios**:
    - Check for console errors
    - Ensure DOM content loaded event fired
 
+5. **Test failures (some expected)**:
+   ```bash
+   # Some tests require numpy (not installed by default)
+   python3 test_esn_reservoir.py  # May fail with "ModuleNotFoundError: No module named 'numpy'"
+   
+   # Performance tests may show failures for development targets
+   make test-performance  # Some thresholds intentionally strict for future implementation
+   ```
+
+6. **Alternative server ports**:
+   ```bash
+   # If port 8000 is busy, try alternative ports
+   python3 -m http.server 8080
+   python3 -m http.server 3000
+   npx http-server -p 8000  # Alternative using Node.js
+   ```
+
 #### **Debugging Commands**
 ```bash
 # Check server is responding
@@ -211,30 +280,38 @@ python3 -m http.server 8000 2>&1 | tee server.log
 4. Test all interactive scenarios (see Manual Testing section above)
 
 #### **After Making Changes**
-1. **ALWAYS** validate syntax: `node -c app.js` 
-2. **ALWAYS** refresh browser and test user scenarios
-3. **ALWAYS** check browser console for new errors
-4. **ALWAYS** test interactive features work correctly
-5. If changing Python code: `python3 echo_kernel_spec.py`
+1. **ALWAYS** validate syntax: `node -c app.js` (timeout: 10 seconds)
+2. **ALWAYS** refresh browser and test user scenarios (timeout: 5 minutes manual testing)
+3. **ALWAYS** check browser console for new errors (F12 → Console)
+4. **ALWAYS** test interactive features work correctly (see Manual Testing section)
+5. If changing Python code: `python3 echo_kernel_spec.py` (timeout: 30 seconds)
+6. **RECOMMENDED**: Run test suite: `make test-quick` (timeout: 5 minutes - NEVER CANCEL)
+7. **RECOMMENDED**: Validate project: `make validate` (timeout: 10 minutes - NEVER CANCEL)
 
 #### **Testing Checklist**
-- [ ] Server starts successfully
-- [ ] All files load without 404 errors
-- [ ] No JavaScript console errors
-- [ ] Interactive nodes respond to hover/click
-- [ ] Reflection panel opens and accepts input
-- [ ] New echoes can be added and appear correctly
-- [ ] Animations and visual effects work
-- [ ] Responsive design functions properly
-- [ ] Python script executes successfully (if modified)
+- [ ] Server starts successfully (`python3 -m http.server 8000` - timeout: 30 seconds)
+- [ ] All files load without 404 errors (`curl` tests - timeout: 60 seconds each)
+- [ ] No JavaScript console errors (F12 → Console in browser)
+- [ ] Interactive nodes respond to hover/click (manual testing)
+- [ ] Reflection panel opens and accepts input (manual testing)
+- [ ] New echoes can be added and appear correctly (manual testing)
+- [ ] Animations and visual effects work (manual testing)
+- [ ] Responsive design functions properly (manual testing)
+- [ ] Python script executes successfully: `python3 echo_kernel_spec.py` (timeout: 30 seconds)
+- [ ] **COMPREHENSIVE**: Test suite passes: `make test-quick` (timeout: 5 minutes - NEVER CANCEL)
+- [ ] **COMPREHENSIVE**: Project validates: `make validate` (timeout: 10 minutes - NEVER CANCEL)
+- [ ] **OPTIONAL**: Performance benchmarks: `make test-performance` (timeout: 10 minutes - NEVER CANCEL)
 
 ### **Critical Reminders**
-- **NEVER CANCEL server processes** - let them run until testing complete
+- **NEVER CANCEL server processes** - let them run until testing complete  
+- **NEVER CANCEL test commands** - all tests complete within 10 minutes maximum
 - **ALWAYS test manual scenarios** - automated checks don't cover user interaction
 - **No build system exists** - changes are immediately reflected on refresh
-- **All dependencies are built-in** - no npm install or pip install needed
+- **All dependencies are built-in** - no npm install or pip install needed  
 - **Application is fully self-contained** - works offline except for external font
-- **Timing is fast** - if operations take more than 1 second, investigate issues
+- **Timing is fast** - if operations take more than expected times, investigate issues
+- **Set appropriate timeouts**: Use 60+ minutes for any potential build commands, 30+ minutes for comprehensive tests
+- **External dependency tolerance**: Some tests may require numpy/scipy (optional for basic functionality)
 
 This is a **real-time interactive application**. Always validate that user interactions work correctly before considering changes complete.
 
