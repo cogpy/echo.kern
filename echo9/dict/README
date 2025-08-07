@@ -1,0 +1,13 @@
+# Thanks to Caerwyn Jones for preparing the dictionary
+# and modifying dict to handle it.
+# This is the Project Gutenberg original Webster's dictionary
+
+wget -O- https://9fans.github.io/plan9port/dist/pgw.tar.bz2|
+	bunzip2|
+	tar xf -
+
+# This is the Project Gutenberg original Roget's thesaurus
+
+wget -O- https://9fans.github.io/plan9port/dist/roget.tar.bz2|
+	bunzip2|
+	tar xf -
