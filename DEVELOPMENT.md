@@ -218,84 +218,47 @@ type(scope): description
 4. **Modularity**: Follow microkernel principles for component isolation
 5. **Documentation**: All code must be thoroughly documented
 
-### Code Style
+> **Note**: Comprehensive coding standards are maintained in `.github/copilot-instructions.md` which includes detailed guidelines for C/C++, Python, and JavaScript development with DTESN-specific conventions, mathematical foundation requirements, real-time performance constraints, and error handling standards.
+
+### Code Style Summary
 
 #### C/C++ (Kernel Implementation)
-```c
-// Use Linux kernel coding style with DTESN-specific extensions
-// Function naming: dtesn_component_action()
-// Variable naming: lower_case_with_underscores
-// Constants: UPPER_CASE_WITH_UNDERSCORES
+- **Naming**: `dtesn_component_action()` functions, `lower_case_with_underscores` variables
+- **Documentation**: Comprehensive function headers with timing requirements
+- **Real-time**: Use `__attribute__((always_inline))` for critical paths
+- **Memory**: Avoid dynamic allocation in real-time contexts
 
-// Example function header
-/**
- * dtesn_membrane_evolve - Evolve P-system membrane state
- * @membrane: Target membrane structure
- * @input: Input vector for evolution
- * @timestamp_ns: Current timestamp in nanoseconds
- *
- * Evolves the membrane state according to P-lingua rules and
- * OEIS A000081 topological constraints.
- *
- * Return: 0 on success, negative error code on failure
- */
-int dtesn_membrane_evolve(struct dtesn_membrane *membrane,
-                         const float *input,
-                         uint64_t timestamp_ns);
-```
-
-#### Python (Specifications and Tools)
-```python
-# Follow PEP 8 with DTESN-specific conventions
-# Class names: CamelCase
-# Function/variable names: snake_case
-# Constants: UPPER_CASE
-
-class DTESNSpecification:
-    """DTESN architecture specification generator.
-    
-    This class generates kernel specifications based on OEIS A000081
-    enumeration and DTESN mathematical foundations.
-    """
-    
-    def generate_membrane_hierarchy(self, max_depth: int) -> List[MembraneSpec]:
-        """Generate P-system membrane hierarchy.
-        
-        Args:
-            max_depth: Maximum tree depth for membrane structure
-            
-        Returns:
-            List of membrane specifications following A000081 enumeration
-        """
-        pass
-```
+#### Python (Specifications and Tools)  
+- **Style**: PEP 8 with DTESN conventions (`CamelCase` classes, `snake_case` functions)
+- **Documentation**: Complete docstrings with mathematical references
+- **Type Hints**: Consistent use throughout
+- **Validation**: OEIS A000081 compliance checks
 
 #### JavaScript (Documentation and Demos)
-```javascript
-// Use modern ES6+ syntax
-// Class names: PascalCase
-// Function/variable names: camelCase
-// Constants: UPPER_CASE
+- **Syntax**: Modern ES6+ with consistent patterns
+- **Naming**: `PascalCase` classes, `camelCase` functions/variables
+- **Performance**: <100ms interactive response, 60fps animations
+- **Documentation**: JSDoc standards with parameter/return types
 
-class DeepTreeEchoVisualization {
-    /**
-     * Interactive visualization of DTESN concepts
-     * @param {HTMLElement} container - Container element for visualization
-     */
-    constructor(container) {
-        this.container = container;
-        this.initializeVisualization();
-    }
-    
-    /**
-     * Animate membrane evolution process
-     * @param {Array} membraneStates - Current membrane states
-     */
-    animateMembraneEvolution(membraneStates) {
-        // Implementation here
-    }
-}
+### Mathematical Foundation Requirements
+
+All implementations must verify OEIS A000081 compliance:
+```python
+def verify_a000081_compliance(tree_structure):
+    """Verify tree follows OEIS A000081: 1,1,2,4,9,20,48,115,286,719..."""
+    expected_counts = [1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766]
+    depth = get_tree_depth(tree_structure)
+    return count_rooted_trees(tree_structure) == expected_counts[depth]
 ```
+
+### Real-time Performance Requirements
+
+| Component | Max Latency | Context |
+|-----------|-------------|---------|
+| Membrane Evolution | ≤ 10μs | Kernel space critical |
+| B-Series Computation | ≤ 100μs | Mathematical operators |
+| ESN Reservoir Update | ≤ 1ms | Learning algorithms |
+| Context Switch | ≤ 5μs | Kernel scheduling |
 
 ### Documentation Standards
 

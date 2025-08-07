@@ -237,3 +237,285 @@ python3 -m http.server 8000 2>&1 | tee server.log
 - **Timing is fast** - if operations take more than 1 second, investigate issues
 
 This is a **real-time interactive application**. Always validate that user interactions work correctly before considering changes complete.
+
+---
+
+## 🔧 Comprehensive Development Standards
+
+### Code Styles and Standards
+
+#### **C/C++ (Kernel Implementation)**
+Follow Linux kernel coding style with DTESN-specific extensions:
+
+**Naming Conventions:**
+- Functions: `dtesn_component_action()` format
+- Variables: `lower_case_with_underscores`
+- Constants: `UPPER_CASE_WITH_UNDERSCORES`
+- Structures: `struct dtesn_component_name`
+
+**Function Documentation:**
+```c
+/**
+ * dtesn_membrane_evolve - Evolve P-system membrane state
+ * @membrane: Target membrane structure
+ * @input: Input vector for evolution
+ * @timestamp_ns: Current timestamp in nanoseconds
+ *
+ * Evolves the membrane state according to P-lingua rules and
+ * OEIS A000081 topological constraints.
+ *
+ * Return: 0 on success, negative error code on failure
+ */
+int dtesn_membrane_evolve(struct dtesn_membrane *membrane,
+                         const float *input,
+                         uint64_t timestamp_ns);
+```
+
+**Real-time Requirements:**
+- All functions must meet strict timing constraints
+- Document timing requirements in function headers
+- Use `__attribute__((always_inline))` for critical paths
+- Avoid dynamic memory allocation in real-time contexts
+
+#### **Python (Specifications and Tools)**
+Follow PEP 8 with DTESN-specific conventions:
+
+**Naming Conventions:**
+- Classes: `CamelCase` (e.g., `DTESNSpecification`)
+- Functions/variables: `snake_case`
+- Constants: `UPPER_CASE`
+- Private members: `_underscore_prefix`
+
+**Documentation Standards:**
+```python
+class DTESNSpecification:
+    """DTESN architecture specification generator.
+    
+    This class generates kernel specifications based on OEIS A000081
+    enumeration and DTESN mathematical foundations.
+    
+    Attributes:
+        max_depth: Maximum tree depth for membrane structure
+        oeis_sequence: A000081 enumeration values
+    """
+    
+    def generate_membrane_hierarchy(self, max_depth: int) -> List[MembraneSpec]:
+        """Generate P-system membrane hierarchy.
+        
+        Args:
+            max_depth: Maximum tree depth for membrane structure
+            
+        Returns:
+            List of membrane specifications following A000081 enumeration
+            
+        Raises:
+            ValueError: If max_depth exceeds OEIS sequence bounds
+        """
+        pass
+```
+
+**Mathematical Rigor:**
+- All implementations must be faithful to OEIS A000081 enumeration
+- Include mathematical references in docstrings
+- Validate inputs against mathematical constraints
+- Use type hints consistently
+
+#### **JavaScript (Documentation and Demos)**
+Use modern ES6+ syntax with consistent patterns:
+
+**Naming Conventions:**
+- Classes: `PascalCase` (e.g., `DeepTreeEchoVisualization`)
+- Functions/variables: `camelCase`
+- Constants: `UPPER_CASE`
+- Private members: `#privateField` or `_underscore` for older compatibility
+
+**Documentation Standards:**
+```javascript
+class DeepTreeEchoVisualization {
+    /**
+     * Interactive visualization of DTESN concepts
+     * @param {HTMLElement} container - Container element for visualization
+     * @param {Object} options - Configuration options
+     * @param {number} options.maxDepth - Maximum tree depth to display
+     */
+    constructor(container, options = {}) {
+        this.container = container;
+        this.maxDepth = options.maxDepth || 8;
+        this.initializeVisualization();
+    }
+    
+    /**
+     * Animate membrane evolution process
+     * @param {Array<MembraneState>} membraneStates - Current membrane states
+     * @returns {Promise<void>} Animation completion promise
+     */
+    async animateMembraneEvolution(membraneStates) {
+        // Implementation follows OEIS A000081 topology
+    }
+}
+```
+
+**Performance Standards:**
+- Interactive response time: < 100ms
+- Animation frame rate: 60fps target
+- Memory usage: Minimal DOM manipulation
+- Use requestAnimationFrame for smooth animations
+
+### **Mathematical Foundation Requirements**
+
+#### **OEIS A000081 Compliance**
+All tree structures must follow the enumeration: `1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766, 12486, ...`
+
+```python
+def verify_a000081_compliance(tree_structure):
+    """Verify that tree structure follows OEIS A000081 enumeration."""
+    # Must validate against sequence for given depth
+    expected_counts = [1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766]
+    depth = get_tree_depth(tree_structure)
+    if depth < len(expected_counts):
+        return count_rooted_trees(tree_structure) == expected_counts[depth]
+    return validate_extended_sequence(tree_structure)
+```
+
+#### **DTESN Architecture Principles**
+1. **P-System Membrane Computing**: Hierarchical membranes based on rooted trees
+2. **B-Series Rooted Tree Ridges**: Elementary differential computation 
+3. **Echo State Networks**: Reservoir state evolution with ODE integration
+
+#### **Real-time Performance Constraints**
+All implementations must meet these timing requirements:
+
+| Component | Max Latency | Test Command |
+|-----------|-------------|--------------|
+| Membrane Evolution | ≤ 10μs | Kernel space critical |
+| B-Series Computation | ≤ 100μs | Mathematical operators |
+| ESN Reservoir Update | ≤ 1ms | Learning algorithms |
+| Context Switch | ≤ 5μs | Kernel scheduling |
+
+### **Development Workflow Standards**
+
+#### **Before Code Changes**
+1. **Mathematical Validation**: Verify OEIS A000081 compliance
+2. **Performance Baseline**: Measure timing for affected components  
+3. **Documentation Review**: Check mathematical foundations
+4. **Test Infrastructure**: Ensure relevant tests exist
+
+#### **During Development**
+1. **Incremental Testing**: Test each component change immediately
+2. **Real-time Validation**: Verify timing constraints continuously
+3. **Mathematical Accuracy**: Cross-reference with specifications
+4. **Documentation Updates**: Update as changes are made
+
+#### **Code Review Checklist**
+- [ ] OEIS A000081 enumeration correctly implemented
+- [ ] Real-time timing constraints validated
+- [ ] Mathematical foundations documented with references
+- [ ] Performance requirements met and tested
+- [ ] Error handling follows kernel conventions
+- [ ] Memory management appropriate for context
+- [ ] Documentation comprehensive and accurate
+
+### **Build System Integration**
+
+#### **Required Make Targets**
+```bash
+# Validation and Testing
+make test-oeis          # OEIS A000081 compliance tests
+make test-timing        # Real-time performance validation  
+make test-math          # Mathematical foundation tests
+make test-kernel        # Kernel-specific functionality
+
+# Code Quality
+make lint-kernel        # C/C++ kernel code linting
+make lint-python        # Python specification linting
+make lint-javascript    # JavaScript documentation linting
+make validate-dtesn     # DTESN architecture validation
+
+# Documentation
+make docs-math          # Mathematical foundation docs
+make docs-api           # API documentation generation
+make docs-kernel        # Kernel interface documentation
+```
+
+#### **Performance Monitoring**
+Continuous integration must validate:
+- Timing constraint compliance
+- Mathematical accuracy
+- OEIS sequence correctness
+- Memory usage patterns
+- Real-time determinism
+
+### **Error Handling Standards**
+
+#### **Kernel Code (C/C++)**
+```c
+// Use standard kernel error codes
+#define DTESN_EINVAL_MEMBRANE  -EINVAL  // Invalid membrane structure
+#define DTESN_ENOTIME         -ETIME   // Real-time constraint violated
+#define DTESN_EMATH           -EDOM    // Mathematical constraint violation
+
+int dtesn_function(struct dtesn_data *data) {
+    if (!data || !data->membrane)
+        return -EINVAL;
+    
+    if (!oeis_a000081_validate(data->tree))
+        return DTESN_EMATH;
+        
+    // Implementation...
+    return 0;
+}
+```
+
+#### **Python Code**
+```python
+class DTESNError(Exception):
+    """Base exception for DTESN operations."""
+    pass
+
+class OEISComplianceError(DTESNError):
+    """Raised when OEIS A000081 constraints are violated."""
+    pass
+
+class PerformanceConstraintError(DTESNError):
+    """Raised when real-time constraints cannot be met."""
+    pass
+```
+
+#### **JavaScript Code**
+```javascript
+class DTESNVisualizationError extends Error {
+    constructor(message, code) {
+        super(message);
+        this.name = 'DTESNVisualizationError';
+        this.code = code;
+    }
+}
+
+// Usage
+if (!this.validateOEISStructure(tree)) {
+    throw new DTESNVisualizationError(
+        'Tree structure violates OEIS A000081 enumeration', 
+        'OEIS_VIOLATION'
+    );
+}
+```
+
+### **Critical Implementation Guidelines**
+
+1. **Mathematical Rigor**: All code must be mathematically sound and verifiable
+2. **Real-time Determinism**: No unbounded operations in critical paths
+3. **OEIS Compliance**: Tree structures must follow A000081 enumeration exactly
+4. **Modular Design**: Follow microkernel principles for isolation
+5. **Energy Efficiency**: Optimize for neuromorphic hardware power constraints
+6. **Documentation**: Mathematical foundations and timing requirements must be documented
+7. **Testing**: Comprehensive validation of mathematical and performance requirements
+
+**When implementing any DTESN component, always verify:**
+- ✅ OEIS A000081 enumeration compliance
+- ✅ Real-time timing constraints met  
+- ✅ Mathematical foundations correct
+- ✅ Performance requirements satisfied
+- ✅ Error handling comprehensive
+- ✅ Documentation complete and accurate
+
+This ensures Echo.Kern maintains its core mission of providing a mathematically rigorous, real-time neuromorphic computing platform.
