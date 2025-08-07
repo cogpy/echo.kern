@@ -1,0 +1,378 @@
+name: Generate C/C++ Kernel Implementation Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature_filter:
+        description: 'Filter features by category (comma-separated: Core Kernel, DTESN Core, Mathematical Core, Neural Computing, Hardware Interface, Kernel API, Development Tools)'
+        required: false
+        default: 'all'
+        type: string
+      priority_filter:
+        description: 'Filter by priority (high, medium, low, or all)'
+        required: false
+        default: 'all'
+        type: string
+      force_recreate:
+        description: 'Force recreate all issues (will close existing ones)'
+        required: false
+        default: 'false'
+        type: boolean
+      dry_run:
+        description: 'Preview issues without creating them'
+        required: false
+        default: 'false'
+        type: boolean
+  schedule:
+    # Run monthly on the 1st at 10 AM UTC to generate new kernel implementation tasks
+    - cron: '0 10 1 * *'
+
+env:
+  FEATURES_FILE: '.github/cpp-kernel-features.json'
+
+jobs:
+  generate-kernel-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Generate C/C++ Kernel Implementation Issues
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read the kernel features configuration
+          const featuresConfig = JSON.parse(fs.readFileSync(process.env.FEATURES_FILE, 'utf8'));
+          
+          // Parse input filters
+          const featureFilter = context.payload.inputs?.feature_filter || 'all';
+          const priorityFilter = context.payload.inputs?.priority_filter || 'all';
+          const forceRecreate = context.payload.inputs?.force_recreate === 'true';
+          const dryRun = context.payload.inputs?.dry_run === 'true';
+          
+          const categoryFilters = featureFilter === 'all' ? [] : 
+            featureFilter.split(',').map(f => f.trim());
+          
+          console.log(`🔧 Starting C/C++ Kernel Implementation Issue Generation`);
+          console.log(`📂 Features file: ${process.env.FEATURES_FILE}`);
+          console.log(`🏷️  Category filter: ${featureFilter}`);
+          console.log(`⭐ Priority filter: ${priorityFilter}`);
+          console.log(`🔄 Force recreate: ${forceRecreate}`);
+          console.log(`👀 Dry run: ${dryRun}`);
+          
+          // Filter features based on inputs
+          let filteredFeatures = featuresConfig.features;
+          
+          if (categoryFilters.length > 0) {
+            filteredFeatures = filteredFeatures.filter(feature => 
+              categoryFilters.includes(feature.category)
+            );
+          }
+          
+          if (priorityFilter !== 'all') {
+            filteredFeatures = filteredFeatures.filter(feature => 
+              feature.priority === priorityFilter
+            );
+          }
+          
+          console.log(`📋 Found ${filteredFeatures.length} features to process`);
+          
+          // Get existing issues to avoid duplicates
+          const existingIssues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'cpp-kernel-implementation',
+            state: 'all',
+            per_page: 100
+          });
+          
+          console.log(`📌 Found ${existingIssues.data.length} existing cpp-kernel-implementation issues`);
+          
+          const existingTitles = new Set(existingIssues.data.map(issue => issue.title));
+          
+          // Force recreate option
+          if (forceRecreate && !dryRun) {
+            console.log('🔄 Force recreate enabled - closing existing cpp-kernel-implementation issues');
+            for (const issue of existingIssues.data) {
+              if (issue.state === 'open') {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+                console.log(`❌ Closed issue #${issue.number}: ${issue.title}`);
+              }
+            }
+            existingTitles.clear();
+          }
+          
+          // Generate issues for each feature
+          let createdCount = 0;
+          let skippedCount = 0;
+          const createdIssues = [];
+          
+          for (const feature of filteredFeatures) {
+            const issueTitle = `[C++ Kernel] ${feature.title}`;
+            
+            if (existingTitles.has(issueTitle) && !forceRecreate) {
+              console.log(`⏭️  Skipping existing issue: ${issueTitle}`);
+              skippedCount++;
+              continue;
+            }
+            
+            // Generate comprehensive issue body
+            const issueBody = generateIssueBody(feature, featuresConfig.workflow_config);
+            
+            if (dryRun) {
+              console.log(`\n📝 [DRY RUN] Would create issue: ${issueTitle}`);
+              console.log(`   Category: ${feature.category}`);
+              console.log(`   Priority: ${feature.priority}`);
+              console.log(`   Complexity: ${feature.complexity}`);
+              console.log(`   Estimated hours: ${feature.estimated_hours}`);
+              createdIssues.push({title: issueTitle, dry_run: true});
+              createdCount++;
+              continue;
+            }
+            
+            try {
+              // Generate labels
+              const labels = [
+                'cpp-kernel-implementation',
+                'dtesn',
+                'kernel',
+                `priority-${feature.priority}`,
+                `complexity-${feature.complexity}`,
+                `category-${feature.category.toLowerCase().replace(/\s+/g, '-')}`
+              ];
+              
+              // Add team assignment labels
+              const teamLabels = getTeamLabels(feature.category, featuresConfig.workflow_config);
+              labels.push(...teamLabels);
+              
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: labels
+              });
+              
+              console.log(`✅ Created issue #${issue.data.number}: ${issueTitle}`);
+              createdIssues.push({
+                number: issue.data.number,
+                title: issueTitle,
+                url: issue.data.html_url,
+                feature_id: feature.id
+              });
+              createdCount++;
+            } catch (error) {
+              console.error(`❌ Failed to create issue "${issueTitle}": ${error.message}`);
+            }
+          }
+          
+          // Generate summary
+          console.log(`\n📊 C/C++ Kernel Implementation Issue Generation Summary:`);
+          console.log(`   📋 Features processed: ${filteredFeatures.length}`);
+          console.log(`   ✅ Issues created: ${createdCount}`);
+          console.log(`   ⏭️  Issues skipped: ${skippedCount}`);
+          console.log(`   🏷️  Filters applied: ${featureFilter} (category), ${priorityFilter} (priority)`);
+          
+          // Create tracking issue for manual runs
+          if (context.eventName === 'workflow_dispatch' && !dryRun && createdCount > 0) {
+            const trackingBody = generateTrackingIssueBody(
+              createdIssues, 
+              filteredFeatures.length, 
+              createdCount, 
+              skippedCount,
+              featureFilter,
+              priorityFilter
+            );
+            
+            try {
+              const trackingIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `C++ Kernel Implementation Tracking - ${new Date().toISOString().split('T')[0]}`,
+                body: trackingBody,
+                labels: ['tracking', 'cpp-kernel-implementation', 'meta']
+              });
+              
+              console.log(`📋 Created tracking issue #${trackingIssue.data.number}`);
+            } catch (error) {
+              console.error(`❌ Failed to create tracking issue: ${error.message}`);
+            }
+          }
+          
+          // Helper function to generate detailed issue body
+          function generateIssueBody(feature, config) {
+            const sections = [];
+            
+            // Header with metadata
+            sections.push(`## ${feature.title}\n`);
+            sections.push(`**Category:** ${feature.category} | **Priority:** ${feature.priority} | **Complexity:** ${feature.complexity}`);
+            sections.push(`**Estimated Effort:** ${feature.estimated_hours} hours (${config.complexity_estimates[feature.complexity]})\n`);
+            
+            // Description
+            sections.push(`### Description\n${feature.description}\n`);
+            
+            // Requirements
+            sections.push(`### Implementation Requirements\n`);
+            feature.requirements.forEach(req => {
+              sections.push(`- [ ] ${req}`);
+            });
+            sections.push('');
+            
+            // Technical Specifications
+            if (feature.technical_specs) {
+              sections.push(`### Technical Specifications\n`);
+              
+              if (feature.technical_specs.performance_targets) {
+                sections.push(`**Performance Targets:**`);
+                Object.entries(feature.technical_specs.performance_targets).forEach(([key, value]) => {
+                  sections.push(`- ${key.replace(/_/g, ' ')}: ${value}`);
+                });
+                sections.push('');
+              }
+              
+              // Add other technical specs
+              Object.entries(feature.technical_specs).forEach(([key, value]) => {
+                if (key !== 'performance_targets' && typeof value === 'object') {
+                  sections.push(`**${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:**`);
+                  if (Array.isArray(value)) {
+                    value.forEach(item => sections.push(`- ${item}`));
+                  } else {
+                    Object.entries(value).forEach(([k, v]) => {
+                      sections.push(`- ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);
+                    });
+                  }
+                  sections.push('');
+                }
+              });
+            }
+            
+            // Code Structure
+            if (feature.code_template) {
+              sections.push(`### Code Structure\n`);
+              sections.push(`**Files to implement:**`);
+              sections.push(`- Header: \`${feature.code_template.header_file}\``);
+              sections.push(`- Source: \`${feature.code_template.source_file}\``);
+              sections.push('');
+              
+              sections.push(`**Key Functions:**`);
+              feature.code_template.key_functions.forEach(func => {
+                sections.push(`- \`${func}\``);
+              });
+              sections.push('');
+            }
+            
+            // Test Requirements  
+            sections.push(`### Testing Requirements\n`);
+            feature.test_requirements.forEach(test => {
+              sections.push(`- [ ] ${test}`);
+            });
+            sections.push('');
+            
+            // Dependencies
+            if (feature.dependencies.length > 0) {
+              sections.push(`### Dependencies\n`);
+              feature.dependencies.forEach(dep => {
+                sections.push(`- ${dep}`);
+              });
+              sections.push('');
+            }
+            
+            // Files to Create
+            if (feature.files_to_create) {
+              sections.push(`### Files to Create\n`);
+              feature.files_to_create.forEach(file => {
+                sections.push(`- [ ] \`${file}\``);
+              });
+              sections.push('');
+            }
+            
+            // Implementation Notes
+            sections.push(`### Implementation Notes\n`);
+            sections.push(`This feature is part of the Echo.Kern DTESN (Deep Tree Echo State Networks) operating system kernel implementation.`);
+            sections.push(`\nSee the [kernel implementation specification](${context.payload.repository.html_url}/blob/main/Echo-Kernel%20Implementation%20Specification.md) for architectural context.`);
+            sections.push(`\n**OEIS A000081 Compliance:** All implementations must follow the unlabeled rooted tree enumeration: 1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766, 12486, ...`);
+            
+            // Acceptance Criteria
+            sections.push(`\n### Acceptance Criteria\n`);
+            sections.push(`- [ ] All implementation requirements completed`);
+            sections.push(`- [ ] Performance targets met and validated`);
+            sections.push(`- [ ] All tests passing`);
+            sections.push(`- [ ] Code reviewed and approved`);
+            sections.push(`- [ ] Documentation updated`);
+            sections.push(`- [ ] Integration with existing DTESN components verified`);
+            
+            sections.push(`\n---`);
+            sections.push(`*Feature ID: \`${feature.id}\` | Auto-generated from C++ kernel implementation workflow*`);
+            
+            return sections.join('\n');
+          }
+          
+          // Helper function to generate tracking issue body
+          function generateTrackingIssueBody(createdIssues, totalFeatures, createdCount, skippedCount, categoryFilter, priorityFilter) {
+            const sections = [];
+            
+            sections.push(`## C++ Kernel Implementation Issue Generation Summary\n`);
+            
+            sections.push(`**Generation Details:**`);
+            sections.push(`- 📅 Generated: ${new Date().toISOString()}`);
+            sections.push(`- 🔍 Category filter: ${categoryFilter}`);
+            sections.push(`- ⭐ Priority filter: ${priorityFilter}`);
+            sections.push(`- 📋 Features processed: ${totalFeatures}`);
+            sections.push(`- ✅ Issues created: ${createdCount}`);
+            sections.push(`- ⏭️ Issues skipped: ${skippedCount}`);
+            sections.push('');
+            
+            if (createdIssues.length > 0) {
+              sections.push(`**Created Issues:**\n`);
+              createdIssues.forEach(issue => {
+                if (issue.dry_run) {
+                  sections.push(`- [DRY RUN] ${issue.title}`);
+                } else {
+                  sections.push(`- [#${issue.number}](${issue.url}) ${issue.title} (\`${issue.feature_id}\`)`);
+                }
+              });
+              sections.push('');
+            }
+            
+            sections.push(`**Next Steps:**`);
+            sections.push(`1. Review and assign created issues to appropriate team members`);
+            sections.push(`2. Prioritize issues based on current development roadmap`);
+            sections.push(`3. Update project boards and milestones`);
+            sections.push(`4. Begin implementation following DTESN architecture guidelines`);
+            sections.push('');
+            
+            sections.push(`---`);
+            sections.push(`*View all kernel implementation issues: [cpp-kernel-implementation label](${context.payload.repository.html_url}/issues?q=is%3Aissue+label%3Acpp-kernel-implementation)*`);
+            
+            return sections.join('\n');
+          }
+          
+          // Helper function to get team assignment labels
+          function getTeamLabels(category, config) {
+            const categoryKey = category.toLowerCase().replace(/\s+/g, '_');
+            const assignments = config.assignment_rules;
+            
+            for (const [key, teams] of Object.entries(assignments)) {
+              if (categoryKey.includes(key) || category.toLowerCase().includes(key)) {
+                return teams.map(team => `team-${team}`);
+              }
+            }
+            
+            return [];
+          }

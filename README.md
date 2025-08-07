@@ -146,10 +146,25 @@ We welcome contributions to Echo.Kern! Please see [DEVELOPMENT.md](DEVELOPMENT.m
 - Contribution workflow
 
 ### Development Workflow
-The project uses an automated issue generation system:
+The project uses automated issue generation systems:
+
+**General Development:**
 - Development tasks are defined in [DEVO-GENESIS.md](DEVO-GENESIS.md)
 - GitHub workflow automatically creates issues from roadmap
 - See [generate-next-steps.yml](.github/workflows/generate-next-steps.yml)
+
+**C/C++ Kernel Implementation:**
+- **Specialized Issue Generator**: [generate-cpp-kernel-issues.yml](.github/workflows/generate-cpp-kernel-issues.yml)
+- **Feature Database**: [cpp-kernel-features.json](.github/cpp-kernel-features.json) 
+- **Documentation**: [C++ Kernel Issue Generator Guide](docs/cpp-kernel-issue-generator.md)
+- **Validation Tool**: `scripts/validate-cpp-kernel-config.py`
+
+The C/C++ kernel workflow generates detailed implementation issues with:
+- Technical specifications and performance targets
+- Code templates and structure guidelines  
+- Comprehensive testing requirements
+- OEIS A000081 compliance checks
+- Real-time constraint validation
 
 ## 📄 License
 
