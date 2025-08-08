@@ -17,6 +17,12 @@ dtesn_spec.md
 *.a
 *.so
 
+# Test executables
+test_scheduler
+test_memory
+test_esn
+test_*
+
 # IDE files
 .vscode/
 .idea/
