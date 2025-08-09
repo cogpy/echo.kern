@@ -22,6 +22,11 @@ test_scheduler
 test_memory
 test_esn
 test_*
+test_profiler
+
+# Analysis tools
+profile_analyzer
+tools/dtesn/profile_analyzer
 
 # IDE files
 .vscode/
