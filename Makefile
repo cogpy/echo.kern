@@ -40,6 +40,21 @@ test:
 	@echo "🚀 Running Echo.Kern Real-Time Test Suite..."
 	@python3 tests/run_tests.py --comprehensive --output test_results.json
 
+# Kernel build target
+kernel:
+	@echo "🔧 Building DTESN Kernel..."
+	@make -f Makefile.kernel kernel
+
+# Kernel test target
+test-kernel:
+	@echo "🧪 Testing DTESN Kernel Components..."
+	@make -f Makefile.kernel test
+
+# Kernel benchmark target
+benchmark-kernel:
+	@echo "📊 Benchmarking DTESN Kernel Performance..."
+	@make -f Makefile.kernel benchmark
+
 test-quick:
 	@echo "⚡ Running quick validation tests..."
 	@python3 tests/run_tests.py --quick

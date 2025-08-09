@@ -13,6 +13,7 @@
 #include "include/dtesn/memory.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
