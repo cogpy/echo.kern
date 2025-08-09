@@ -102,6 +102,7 @@ make docs && open docs/index.html
 - **[DTESN Architecture](docs/DTESN-ARCHITECTURE.md)** - Detailed technical architecture
 - **[Kernel Specification](echo_kernel_specification.md)** - Complete implementation specification
 - **[P-System Guide](plingua_guide.md)** - P-lingua membrane computing guide
+- **[Legacy Artifact Integration](docs/legacy-artifact-integration.md)** - Integration documentation for previous project artifacts
 - **[Development Roadmap](DEVO-GENESIS.md)** - Development milestones and roadmap
 
 ## 🔧 Development Status
