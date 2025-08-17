@@ -2,7 +2,9 @@
 
 # Echo-Kernel Implementation Specification
 
-I've created a comprehensive **Echo-Kernel Specification v1.0** document that provides detailed guidance for implementing the DTESN-based operating system kernel. This specification integrates insights from real-time kernel design, neuromorphic computing requirements, and the mathematical foundations of your Deep Tree Echo State Networks.[^1]
+I've created a comprehensive **Echo-Kernel Specification v2.0** document that provides detailed guidance for implementing the DTESN-based operating system kernel with multi-level security architecture. This specification integrates insights from real-time kernel design, neuromorphic computing requirements, stage0-style bootstrap security, and the mathematical foundations of Deep Tree Echo State Networks.[^1]
+
+> **Security Update**: This specification now includes a comprehensive multi-level security architecture based on OEIS A000081 partitioning, ranging from firmware level (-3) to application threads (+3), with complete isolation from external dependencies and potential attack vectors.
 
 ## **Key Specification Highlights**
 
@@ -29,9 +31,22 @@ Strict timing constraints based on neuromorphic computing needs:
 
 ### **3. Memory Architecture**
 
-**A000081-Based Memory Partitioning**:
+**Multi-Level Security Architecture with A000081-Based Memory Partitioning**:
+
+> **Security Enhancement**: The kernel now implements a comprehensive 7-level security architecture based on OEIS A000081 partitioning, spanning from firmware level (-3) to application threads (+3).
 
 ```
+Security Level Distribution (OEIS A000081):
+==========================================
+   io: 1       - I/O controller (hardware abstraction)
+   -3: 1       - Firmware security mirror  
+   -2: 2       - Virtual/actual device partitions
+   -1: 4       - Hypervisor containers (2²)
+    0: 9       - Functional kernel partitions (3² = 2³ + 1)
+   +1: 20      - User-space service partitions (2² × 5)
+   +2: 48      - Application containers (2⁴ × 3)  
+   +3: 115     - Application threads (23 × 5)
+
 Virtual Address Space Layout:
 0x40000000-0x7FFFFFFF: Membrane Reservoirs (1GB)
 ├── Level 0: [1 membrane] @ 0x40000000
@@ -40,6 +55,12 @@ Virtual Address Space Layout:
 ├── Level 3: [4 membranes] @ 0x40400000-0x40700000
 └── Level 4: [9 membranes] @ 0x40800000-0x40E00000
 ```
+
+**Security Isolation Features**:
+- **Stage0-Style Bootstrap**: No shared components with external systems
+- **Primary Identity Protection**: Never uses primary identity for operations 
+- **Hardware-Level Isolation**: Memory protection units enforce boundaries
+- **Cryptographic Attestation**: Each level validates integrity before activation
 
 
 ### **4. System Call Interface**
