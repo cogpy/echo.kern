@@ -123,6 +123,17 @@ struct dtesn_membrane_op_params {
     __u32 data_size;                /* Data size */
 };
 
+/* Membrane operation parameters */
+struct dtesn_membrane_params {
+    __s32 fd;                       /* DTESN instance file descriptor */
+    __u32 operation;                /* Membrane operation type */
+    __u32 membrane_id;              /* Target membrane ID */
+    __u32 parent_id;                /* Parent membrane ID (for create) */
+    __u32 steps;                    /* Evolution steps (for evolve) */
+    const void *data;               /* Operation-specific data */
+    __u32 data_size;                /* Data size */
+};
+
 /* B-series computation parameters */
 struct dtesn_bseries_params {
     __s32 fd;                       /* DTESN instance file descriptor */
@@ -143,8 +154,20 @@ struct dtesn_esn_params {
     __u32 state_size;               /* State vector size */
     float *output;                  /* Output vector */
     __u32 output_size;              /* Output vector size */
-    float leak_rate;                /* ESN leak rate parameter */
-    float spectral_radius;          /* Target spectral radius */
+    float learning_rate;            /* Learning rate for training */
+    float regularization;           /* Regularization parameter */
+};
+
+/* Hardware device information */
+struct dtesn_device_info {
+    __u32 device_id;                /* Unique device identifier */
+    __u32 device_type;              /* Device type (GPU, FPGA, etc.) */
+    __u32 compute_units;            /* Number of compute units */
+    __u64 memory_size_bytes;        /* Available memory in bytes */
+    __u32 max_frequency_mhz;        /* Maximum operating frequency */
+    __u32 capabilities;             /* Device capability flags */
+    char name[64];                  /* Human-readable device name */
+    char vendor[32];                /* Vendor name */
 };
 
 /* Performance metrics structure */
