@@ -3,6 +3,7 @@
 .PHONY: help docs docs-diagrams docs-clean test-roadmap validate lint clean all
 .PHONY: test test-quick test-performance test-interactive test-monitoring test-integration
 .PHONY: test-continuous start-server stop-server
+.PHONY: echo9-validate echo9-test echo9-modules
 
 # Default target
 help:
@@ -30,6 +31,11 @@ help:
 	@echo "  test-roadmap  Test DEVO-GENESIS.md compatibility with workflow"
 	@echo "  validate      Validate all project files"
 	@echo "  lint          Run code linting (when implementation exists)"
+	@echo ""
+	@echo "Echo9 Development Area:"
+	@echo "  echo9-validate   Validate echo9 kernel functions area"
+	@echo "  echo9-test       Test echo9 DTESN prototypes"
+	@echo "  echo9-modules    Build echo9 kernel modules (requires kernel headers)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  clean         Clean all generated files"
@@ -149,6 +155,9 @@ validate: test-roadmap test-quick
 	@python3 -c "from tests.interactive_tests import InteractiveTestSuite; print('✅ Interactive tests available')"
 	@python3 -c "from tests.continuous_monitoring import ContinuousMonitor; print('✅ Continuous monitoring available')"
 	@echo ""
+	@echo "  🧪 Echo9 development area..."
+	@cd echo9 && python3 validate_echo9.py > /dev/null && echo "  ✅ Echo9 kernel functions area validated"
+	@echo ""
 	@echo "🎯 Project validation complete!"
 
 lint:
@@ -160,6 +169,11 @@ lint:
 	@python3 -m py_compile tests/interactive_tests.py
 	@python3 -m py_compile tests/continuous_monitoring.py
 	@python3 -m py_compile tests/run_tests.py
+	@echo "  📝 Echo9 Python files..."
+	@python3 -m py_compile echo9/validate_echo9.py
+	@python3 -m py_compile echo9/echo-kernel-functions/dtesn-prototypes/run_tests.py
+	@python3 -m py_compile echo9/echo-kernel-functions/neuromorphic-drivers/test_drivers.py
+	@python3 -m py_compile echo9/echo-kernel-functions/real-time-extensions/validate_realtime.py
 	@echo "  ✅ Python files compile successfully"
 	@echo "  📄 JavaScript syntax..."
 	@node -c app.js
@@ -190,7 +204,26 @@ all: validate docs test-quick
 	@echo "  1. Run comprehensive tests: make test"
 	@echo "  2. Start continuous monitoring: make test-continuous"
 	@echo "  3. Begin kernel implementation tasks"
-	@echo "  4. See DEVO-GENESIS.md for development roadmap"
+	@echo "  4. Validate echo9 area: make echo9-validate"
+	@echo "  5. See DEVO-GENESIS.md for development roadmap"
+
+# Echo9 Development Area Targets
+echo9-validate:
+	@echo "🚀 Echo9 Kernel Functions Area Validation"
+	@cd echo9 && python3 validate_echo9.py
+
+echo9-test:
+	@echo "🧪 Echo9 DTESN Prototypes Testing"
+	@cd echo9/echo-kernel-functions/dtesn-implementations && python3 run_tests.py
+
+echo9-modules:
+	@echo "🔧 Building Echo9 Kernel Modules"
+	@if [ -d /lib/modules/$$(uname -r)/build ]; then \
+		cd echo9/echo-kernel-functions/kernel-modules && make; \
+	else \
+		echo "⚠️  Kernel headers not found. Install linux-headers package."; \
+		echo "   Skipping kernel module build."; \
+	fi
 
 # Bonus: Test the GitHub workflow (requires GitHub CLI or API access)
 test-workflow:

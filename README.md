@@ -121,6 +121,30 @@ make docs && open docs/index.html
 
 See [DEVO-GENESIS.md](DEVO-GENESIS.md) for detailed development roadmap.
 
+## 🧪 Echo9 Development Area
+
+The `echo9/echo-kernel-functions/` directory contains organized prototype implementations and experimental code for Echo.Kern DTESN development:
+
+### Structure
+- **`dtesn-implementations/`** - DTESN component implementations (P-Systems, B-Series, ESN, OEIS validation)
+- **`kernel-modules/`** - Real-time kernel module implementations and build system
+- **`neuromorphic-drivers/`** - Hardware abstraction layer for neuromorphic devices
+- **`real-time-extensions/`** - Real-time scheduler extensions and performance validation
+
+### Usage
+```bash
+# Validate entire echo9 area
+make echo9-validate
+
+# Test DTESN prototypes
+make echo9-test
+
+# Build kernel modules (requires kernel headers)
+make echo9-modules
+```
+
+All echo9 components follow DTESN coding standards and integrate with the main project validation system.
+
 ## 🎯 Key Features
 
 - **Real-time Determinism**: Bounded response times for critical operations

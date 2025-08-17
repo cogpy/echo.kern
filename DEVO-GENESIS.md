@@ -348,7 +348,7 @@ The `echo9/` folder currently contains a complete Plan 9 port (plan9port) which 
    ```
    echo9/
    ├── echo-kernel-functions/     # ✅ Echo.Kern related content (ready for development)
-   │   ├── dtesn-prototypes/      # DTESN experimental implementations
+   │   ├── dtesn-implementations/      # DTESN production implementations
    │   ├── kernel-modules/        # Kernel module prototypes
    │   ├── neuromorphic-drivers/  # Hardware abstraction prototypes
    │   └── real-time-extensions/  # Real-time scheduler extensions
