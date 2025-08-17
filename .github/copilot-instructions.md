@@ -2,6 +2,9 @@
 
 **ALWAYS follow these instructions first. Only search for additional information or use bash commands if the information here is incomplete or found to be in error.**
 
+# **ALWAYS Double check as always that NO mock/demo/placeholder/simulated/prototype or otherwise fake implementations are polluting the kernel!**
+# **This is a real kernel implementation so only real functional implementations suitable for production use of the kernel should be present!**
+
 ## Working Effectively
 
 ### Initial Setup & Dependencies
