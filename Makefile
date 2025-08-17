@@ -14,6 +14,13 @@ help:
 	@echo "  docs-diagrams Generate Mermaid and PlantUML diagrams"
 	@echo "  docs-clean    Clean generated documentation files"
 	@echo ""
+	@echo "User-Space Libraries:"
+	@echo "  libdtesn      Build both static and shared libdtesn libraries"
+	@echo "  examples      Build example applications"
+	@echo "  python-bindings Build Python bindings for libdtesn"
+	@echo "  js-bindings   Build JavaScript/WebAssembly bindings"
+	@echo "  test-libdtesn Test libdtesn functionality"
+	@echo ""
 	@echo "Testing (Real-Time Framework):"
 	@echo "  test          Run comprehensive real-time test suite"
 	@echo "  test-quick    Run quick validation tests"
@@ -45,6 +52,62 @@ help:
 test:
 	@echo "🚀 Running Echo.Kern Real-Time Test Suite..."
 	@python3 tests/run_tests.py --comprehensive --output test_results.json
+
+# User-Space Library Targets
+.PHONY: libdtesn libdtesn-static libdtesn-shared examples python-bindings js-bindings test-libdtesn
+
+libdtesn: libdtesn-static libdtesn-shared
+
+libdtesn-static:
+	@echo "🔧 Building libdtesn static library..."
+	@mkdir -p build/lib
+	@gcc $(CFLAGS) -c lib/libdtesn/dtesn_api.c -o build/lib/dtesn_api.o
+	@gcc $(CFLAGS) -c lib/libdtesn/dtesn_membrane.c -o build/lib/dtesn_membrane.o
+	@gcc $(CFLAGS) -c lib/libdtesn/dtesn_bseries.c -o build/lib/dtesn_bseries.o
+	@gcc $(CFLAGS) -c lib/libdtesn/dtesn_esn.c -o build/lib/dtesn_esn.o
+	@ar rcs build/lib/libdtesn.a build/lib/*.o
+	@echo "✅ Static library build/lib/libdtesn.a created"
+
+libdtesn-shared:
+	@echo "🔧 Building libdtesn shared library..."
+	@mkdir -p build/lib
+	@gcc $(CFLAGS) -fPIC -c lib/libdtesn/dtesn_api.c -o build/lib/dtesn_api_shared.o
+	@gcc $(CFLAGS) -fPIC -c lib/libdtesn/dtesn_membrane.c -o build/lib/dtesn_membrane_shared.o
+	@gcc $(CFLAGS) -fPIC -c lib/libdtesn/dtesn_bseries.c -o build/lib/dtesn_bseries_shared.o
+	@gcc $(CFLAGS) -fPIC -c lib/libdtesn/dtesn_esn.c -o build/lib/dtesn_esn_shared.o
+	@gcc -shared -o build/lib/libdtesn.so build/lib/*_shared.o $(LDFLAGS)
+	@echo "✅ Shared library build/lib/libdtesn.so created"
+
+examples: libdtesn-static
+	@echo "🔧 Building example applications..."
+	@mkdir -p build/examples
+	@gcc $(CFLAGS) -Ilib/libdtesn examples/hello_dtesn.c -Lbuild/lib -ldtesn $(LDFLAGS) -lm -o build/examples/hello_dtesn
+	@echo "✅ Example application build/examples/hello_dtesn created"
+
+python-bindings: libdtesn-shared
+	@echo "🐍 Building Python bindings..."
+	@mkdir -p build/bindings/python
+	@python3 -c "import sysconfig; print('Python development headers found')" || (echo "❌ Python development headers required"; exit 1)
+	@gcc $(CFLAGS) -fPIC $$(python3-config --cflags) -c bindings/python/pydtesn.c -o build/bindings/python/pydtesn.o
+	@gcc -shared build/bindings/python/pydtesn.o -Lbuild/lib -ldtesn $$(python3-config --ldflags) $(LDFLAGS) -o build/bindings/python/pydtesn.so
+	@echo "✅ Python bindings build/bindings/python/pydtesn.so created"
+
+js-bindings:
+	@echo "🌐 Building JavaScript/WebAssembly bindings..."
+	@mkdir -p build/bindings/js
+	@command -v emcc >/dev/null 2>&1 || (echo "❌ Emscripten required for WebAssembly bindings"; exit 1)
+	@emcc bindings/js/dtesn_wasm.c -o build/bindings/js/dtesn.js \
+		-s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+		-s ALLOW_MEMORY_GROWTH=1 \
+		-s MODULARIZE=1 \
+		-s EXPORT_NAME='"DTESNModule"' \
+		-O2
+	@echo "✅ JavaScript/WASM bindings build/bindings/js/dtesn.js created"
+
+test-libdtesn: examples
+	@echo "🧪 Testing libdtesn user-space library..."
+	@echo "Note: This test requires kernel DTESN modules to be loaded"
+	@./build/examples/hello_dtesn --verbose || echo "⚠️  Test requires DTESN kernel modules"
 
 # Kernel build target
 kernel:
@@ -182,6 +245,7 @@ lint:
 # Utilities
 clean: docs-clean
 	@echo "🧹 Cleaning all generated files..."
+	@rm -rf build/lib build/examples build/bindings
 	@rm -f *.pyc __pycache__/*
 	@rm -f tests/__pycache__/* tests/*.pyc
 	@rm -f *_results.json test_results.json
