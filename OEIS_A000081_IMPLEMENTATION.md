@@ -39,9 +39,8 @@ python3 dtesn_compiler.py oeis-enum --terms 20 --verbose
 python3 dtesn_compiler.py validate examples/basic_dtesn.dtspec --verbose
 ```
 
-**Demo and Testing:**
-- `oeis_validator_demo.py`: Comprehensive demonstration of capabilities
-- `test_oeis_a000081.py`: Full test suite with 7 test categories
+**Testing and Validation:**
+- `test_oeis_a000081.py`: Comprehensive test suite with 7 test categories
 
 ### 4. Mathematical Foundation
 
@@ -143,7 +142,6 @@ print(f"Max {max_nodes} nodes for ≤1000 trees in real-time")
 ### New Files
 - `oeis_a000081_enumerator.py` - Core enumeration module (7.4KB)
 - `test_oeis_a000081.py` - Comprehensive test suite (7.0KB)
-- `oeis_validator_demo.py` - Demonstration script (6.8KB)
 
 ### Modified Files
 - `dtesn_compiler.py` - Enhanced with new enumeration capabilities

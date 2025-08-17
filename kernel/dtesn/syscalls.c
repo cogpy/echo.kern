@@ -627,23 +627,7 @@ error:
     return ret;
 }
 
-/* Additional syscalls for membrane operations, B-series, and ESN would be implemented here */
-/* For brevity, including placeholder stubs that delegate to existing implementations */
-
-SYSCALL_DEFINE1(sys_membrane_op, const struct dtesn_membrane_op_params __user *, params) {
-    /* Delegate to existing membrane syscalls in psystem_syscalls.c */
-    return -ENOSYS; /* TODO: Implement delegation */
-}
-
-SYSCALL_DEFINE1(sys_bseries_compute, const struct dtesn_bseries_params __user *, params) {
-    /* Delegate to B-series computation functions */
-    return -ENOSYS; /* TODO: Implement */
-}
-
-SYSCALL_DEFINE1(sys_esn_update, const struct dtesn_esn_params __user *, params) {
-    /* Delegate to ESN update functions */
-    return -ENOSYS; /* TODO: Implement */
-}
+/* Additional syscalls for membrane operations, B-series, and ESN are implemented in their respective modules */
 
 /**
  * dtesn_syscalls_init - Initialize DTESN syscalls module

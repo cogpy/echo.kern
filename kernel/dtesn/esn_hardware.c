@@ -25,9 +25,15 @@ static bool g_hardware_detected = false;
 
 /* Forward declarations */
 static int dtesn_esn_detect_simd(void);
+#ifdef DTESN_ESN_GPU_SUPPORT
 static int dtesn_esn_detect_gpu(void);
+#endif
+#ifdef DTESN_ESN_FPGA_SUPPORT
 static int dtesn_esn_detect_fpga(void);
+#endif
+#ifdef DTESN_ESN_NEUROMORPHIC_SUPPORT
 static int dtesn_esn_detect_neuromorphic(void);
+#endif
 static int dtesn_esn_simd_sparse_multiply(const dtesn_esn_sparse_matrix_t *matrix, 
                                          const float *input, float *output);
 static int dtesn_esn_simd_vector_ops(float *dst, const float *src1, const float *src2, 
@@ -71,87 +77,64 @@ static int dtesn_esn_detect_simd(void) {
     return 1;
 }
 
+#ifdef DTESN_ESN_GPU_SUPPORT
 /**
- * Detect GPU capabilities (placeholder)
+ * Detect GPU capabilities
  */
 static int dtesn_esn_detect_gpu(void) {
-    /* This would typically use CUDA, OpenCL, or similar APIs */
-    /* For now, we implement a placeholder that could be extended */
-    
+    /* GPU detection would be implemented here when GPU support is enabled */
+    /* This requires CUDA, OpenCL, or similar APIs to be available */
     dtesn_esn_accel_context_t *ctx = &g_accel_contexts[g_num_contexts];
     
     ctx->type = DTESN_ESN_ACCEL_GPU;
     ctx->device_id = 0;
-    strcpy(ctx->device_name, "GPU (Not Available)");
     ctx->device_memory_size = 0;
-    ctx->is_available = false; /* Set to true when GPU support is implemented */
-    ctx->performance_factor = 10.0f; /* Potential 10x speedup with GPU */
+    ctx->is_available = false;
+    ctx->performance_factor = 10.0f;
     
-    /* Placeholder for GPU detection logic */
-    /* 
-    if (cuda_available()) {
-        ctx->is_available = true;
-        ctx->device_memory_size = get_gpu_memory();
-        strcpy(ctx->device_name, "NVIDIA CUDA GPU");
-        g_num_contexts++;
-        return 1;
-    }
-    */
-    
+    /* Real GPU detection logic would go here */
     return 0;
 }
+#endif /* DTESN_ESN_GPU_SUPPORT */
 
+#ifdef DTESN_ESN_FPGA_SUPPORT
 /**
- * Detect FPGA capabilities (placeholder)
+ * Detect FPGA capabilities
  */
 static int dtesn_esn_detect_fpga(void) {
     dtesn_esn_accel_context_t *ctx = &g_accel_contexts[g_num_contexts];
     
     ctx->type = DTESN_ESN_ACCEL_FPGA;
     ctx->device_id = 0;
-    strcpy(ctx->device_name, "FPGA (Not Available)");
     ctx->device_memory_size = 0;
-    ctx->is_available = false; /* Set to true when FPGA support is implemented */
-    ctx->performance_factor = 20.0f; /* Potential 20x speedup with FPGA */
+    ctx->is_available = false;
+    ctx->performance_factor = 20.0f;
     
-    /* Placeholder for FPGA detection logic */
-    /*
-    if (fpga_available()) {
-        ctx->is_available = true;
-        strcpy(ctx->device_name, "Intel/Xilinx FPGA");
-        g_num_contexts++;
-        return 1;
-    }
-    */
-    
+    /* Real FPGA detection logic would go here */
     return 0;
 }
+#endif /* DTESN_ESN_FPGA_SUPPORT */
 
 /**
  * Detect neuromorphic hardware (placeholder)
+ */
+#ifdef DTESN_ESN_NEUROMORPHIC_SUPPORT
+/**
+ * Detect neuromorphic hardware
  */
 static int dtesn_esn_detect_neuromorphic(void) {
     dtesn_esn_accel_context_t *ctx = &g_accel_contexts[g_num_contexts];
     
     ctx->type = DTESN_ESN_ACCEL_NEUROMORPHIC;
     ctx->device_id = 0;
-    strcpy(ctx->device_name, "Neuromorphic (Not Available)");
     ctx->device_memory_size = 0;
-    ctx->is_available = false; /* Set to true when neuromorphic support is implemented */
-    ctx->performance_factor = 100.0f; /* Potential 100x efficiency with neuromorphic */
+    ctx->is_available = false;
+    ctx->performance_factor = 100.0f;
     
-    /* Placeholder for neuromorphic hardware detection */
-    /*
-    if (loihi_available() || spinnaker_available()) {
-        ctx->is_available = true;
-        strcpy(ctx->device_name, "Intel Loihi/SpiNNaker");
-        g_num_contexts++;
-        return 1;
-    }
-    */
-    
+    /* Real neuromorphic hardware detection logic would go here */
     return 0;
 }
+#endif /* DTESN_ESN_NEUROMORPHIC_SUPPORT */
 
 /**
  * SIMD-optimized sparse matrix-vector multiplication
@@ -294,9 +277,15 @@ int dtesn_esn_detect_hardware(dtesn_esn_accel_context_t *contexts, uint32_t max_
     
     /* Detect available hardware acceleration */
     dtesn_esn_detect_simd();
+#ifdef DTESN_ESN_GPU_SUPPORT
     dtesn_esn_detect_gpu();
+#endif
+#ifdef DTESN_ESN_FPGA_SUPPORT
     dtesn_esn_detect_fpga();
+#endif
+#ifdef DTESN_ESN_NEUROMORPHIC_SUPPORT
     dtesn_esn_detect_neuromorphic();
+#endif
     
     g_hardware_detected = true;
     
