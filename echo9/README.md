@@ -7,7 +7,7 @@ This folder has been reorganized to separate Echo.Kern related content from unre
 ### `echo-kernel-functions/`
 Contains Echo.Kern DTESN-related experimental implementations and prototypes:
 
-- **`dtesn-prototypes/`** - Experimental DTESN component implementations
+- **`dtesn-implementations/`** - Production DTESN component implementations
 - **`kernel-modules/`** - Kernel module prototypes and development code
 - **`neuromorphic-drivers/`** - Hardware abstraction layer prototypes
 - **`real-time-extensions/`** - Real-time scheduler extensions and optimizations

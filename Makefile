@@ -214,7 +214,7 @@ echo9-validate:
 
 echo9-test:
 	@echo "🧪 Echo9 DTESN Prototypes Testing"
-	@cd echo9/echo-kernel-functions/dtesn-prototypes && python3 run_tests.py
+	@cd echo9/echo-kernel-functions/dtesn-implementations && python3 run_tests.py
 
 echo9-modules:
 	@echo "🔧 Building Echo9 Kernel Modules"

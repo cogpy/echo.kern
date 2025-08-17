@@ -100,7 +100,7 @@ def main():
         return True
     else:
         print("⚠️  Some real-time validations FAILED")
-        print("Note: This is expected in development/prototype phase")
+        print("Note: This may occur during initial system configuration")
         return False
 
 if __name__ == "__main__":

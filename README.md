@@ -126,7 +126,7 @@ See [DEVO-GENESIS.md](DEVO-GENESIS.md) for detailed development roadmap.
 The `echo9/echo-kernel-functions/` directory contains organized prototype implementations and experimental code for Echo.Kern DTESN development:
 
 ### Structure
-- **`dtesn-prototypes/`** - DTESN component prototypes (P-Systems, B-Series, ESN, OEIS validation)
+- **`dtesn-implementations/`** - DTESN component implementations (P-Systems, B-Series, ESN, OEIS validation)
 - **`kernel-modules/`** - Real-time kernel module implementations and build system
 - **`neuromorphic-drivers/`** - Hardware abstraction layer for neuromorphic devices
 - **`real-time-extensions/`** - Real-time scheduler extensions and performance validation

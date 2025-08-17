@@ -17,7 +17,7 @@ def validate_directory_structure():
     print("=" * 40)
     
     expected_dirs = [
-        'dtesn-prototypes',
+        'dtesn-implementations',
         'kernel-modules', 
         'neuromorphic-drivers',
         'real-time-extensions'

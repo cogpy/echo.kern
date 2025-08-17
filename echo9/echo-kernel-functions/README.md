@@ -4,7 +4,7 @@ This folder contains experimental implementations and prototypes related to Echo
 
 ## Folder Structure
 
-### `dtesn-prototypes/`
+### `dtesn-implementations/`
 Experimental DTESN component implementations:
 - Prototype P-System membrane computing modules
 - B-Series tree classification experiments  

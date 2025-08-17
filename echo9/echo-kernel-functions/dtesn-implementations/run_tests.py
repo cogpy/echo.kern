@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Echo.Kern DTESN Prototypes Test Suite
+Echo.Kern DTESN Implementation Test Suite
 Part of Echo9 development area
 
-This script runs all prototype validation tests.
+This script runs all implementation validation tests.
 """
 
 import sys
@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 def run_test_suite():
-    """Run comprehensive prototype test suite."""
+    """Run comprehensive implementation test suite."""
     test_files = [
         'test_psystem_membranes.py',
         'test_psystem_evolution_engine.py', 
@@ -26,7 +26,7 @@ def run_test_suite():
     total_tests = 0
     passed_tests = 0
     
-    print("🧪 Running DTESN Prototype Test Suite")
+    print("🧪 Running DTESN Implementation Test Suite")
     print("=" * 50)
     
     for test_file in test_files:
@@ -57,21 +57,6 @@ def run_test_suite():
     
     print("\n" + "=" * 50)
     print(f"📊 Test Results: {passed_tests}/{total_tests} passed")
-    
-    # Run demonstration scripts
-    demo_files = ['bseries_calculator_demo.py', 'oeis_validator_demo.py', 'evolution_engine_validation.py']
-    for demo_file in demo_files:
-        if Path(demo_file).exists():
-            print(f"\n🎯 Running demonstration: {demo_file}")
-            try:
-                result = subprocess.run([sys.executable, demo_file], 
-                                      capture_output=True, text=True, timeout=30)
-                if result.returncode == 0:
-                    print(f"✅ {demo_file} completed successfully")
-                else:
-                    print(f"⚠️  {demo_file} completed with warnings")
-            except Exception as e:
-                print(f"❌ {demo_file} failed: {e}")
     
     return passed_tests == total_tests
 
