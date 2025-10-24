@@ -1,0 +1,333 @@
+.\" P-System Membrane Computing Manual Page
+.\" =========================================
+.\" P-System membrane computing interface for Echo.Kern
+.\"
+.TH PSYSTEM 4 "2024-10-24" "Echo.Kern v1.0" "Kernel Interfaces"
+.SH NAME
+psystem \- P-System membrane computing kernel interface
+.SH SYNOPSIS
+.nf
+.B #include <dtesn/psystem.h>
+.sp
+.BI "int fd = open(" "\"/dev/dtesn/membrane\"" ", " flags );
+.fi
+.SH DESCRIPTION
+The
+.B psystem
+kernel interface provides P-System membrane computing capabilities
+for hierarchical parallel computation. P-systems are bio-inspired
+computing models based on membrane structures with objects and rules.
+.PP
+Key features:
+.IP \(bu 2
+.B Hierarchical membranes
+following OEIS A000081 rooted tree topology
+.IP \(bu 2
+.B P-lingua rule evolution
+with evolution, communication, division, dissolution
+.IP \(bu 2
+.B Parallel rule application
+with maximal parallelism semantics
+.IP \(bu 2
+.B Real-time performance
+with \(le 10\(mus evolution latency
+.SH MEMBRANE HIERARCHY
+P-system membranes are organized in a tree structure where depth
+levels follow OEIS A000081 enumeration:
+.PP
+.nf
+    depth=0: skin membrane (1 membrane)
+    depth=1: inner membranes (1 membrane max)
+    depth=2: nested membranes (2 membranes max)
+    depth=3: deep membranes (4 membranes max)
+    depth=4: deeper membranes (9 membranes max)
+.fi
+.PP
+Each membrane contains:
+.IP \(bu 2
+.B Multisets
+of objects with multiplicities
+.IP \(bu 2
+.B Rules
+for object transformation and communication
+.IP \(bu 2
+.B Child membranes
+for hierarchical computation
+.IP \(bu 2
+.B Membrane label
+for identification in rules
+.SH MEMBRANE STRUCTURE
+.nf
+struct dtesn_psystem_membrane_t {
+    uint32_t membrane_id;          /* Unique identifier */
+    char label[64];                /* Membrane label */
+    uint32_t depth_level;          /* OEIS A000081 depth */
+    uint32_t parent_id;            /* Parent membrane */
+    uint32_t *children_ids;        /* Child membranes */
+    uint32_t num_children;         /* Number of children */
+    dtesn_psystem_multiset_t *objects;  /* Object multiset */
+    dtesn_psystem_rule_t **rules;  /* Evolution rules */
+    uint32_t num_rules;            /* Rule count */
+    bool is_dissolved;             /* Dissolution state */
+    pthread_mutex_t lock;          /* Concurrency control */
+};
+.fi
+.SH RULE TYPES
+P-system rules define membrane behavior:
+.SS Evolution Rules
+Transform objects within a membrane:
+.PP
+.nf
+    [u]'h \-> [v]'h
+.fi
+.PP
+Objects in multiset
+.I u
+are replaced with objects in
+.I v
+within membrane
+.IR h .
+.SS Communication Rules
+Move objects between membranes:
+.PP
+.nf
+    [u]'h \-> [v]'here [w]'out [x]'in_j
+.fi
+.PP
+Objects can stay
+.RI ( here ),
+move out to parent
+.RI ( out ),
+or move into child
+.I j
+.RI ( in_j ).
+.SS Division Rules
+Split a membrane into two:
+.PP
+.nf
+    [u]'h \-> [v]'h [w]'h
+.fi
+.PP
+Creates a new membrane at the same depth level.
+Division is subject to OEIS A000081 constraints.
+.SS Dissolution Rules
+Dissolve a membrane and release contents:
+.PP
+.nf
+    [u]'h \-> []
+.fi
+.PP
+All objects and child membranes move to parent.
+.SH IOCTL OPERATIONS
+.TP
+.B PSYSTEM_IOC_CREATE_MEMBRANE
+Create new membrane at specified depth
+.RS
+.nf
+struct psystem_create_params {
+    const char *label;
+    uint32_t depth_level;
+    uint32_t parent_id;
+};
+.fi
+.RE
+.TP
+.B PSYSTEM_IOC_ADD_OBJECT
+Add objects to membrane multiset
+.RS
+.nf
+struct psystem_add_object_params {
+    uint32_t membrane_id;
+    const char *symbol;
+    uint32_t multiplicity;
+};
+.fi
+.RE
+.TP
+.B PSYSTEM_IOC_ADD_RULE
+Add evolution rule to membrane
+.RS
+.nf
+struct psystem_add_rule_params {
+    uint32_t membrane_id;
+    const char *lhs;        /* Left-hand side */
+    const char *rhs;        /* Right-hand side */
+    uint32_t priority;      /* Rule priority */
+    uint32_t rule_type;     /* Evolution/communication/etc */
+};
+.fi
+.RE
+.TP
+.B PSYSTEM_IOC_EVOLVE
+Execute one evolution step
+.RS
+.nf
+struct psystem_evolve_params {
+    uint32_t system_id;
+    uint32_t max_steps;
+    bool parallel;          /* Parallel execution */
+};
+.fi
+.RE
+.TP
+.B PSYSTEM_IOC_GET_STATE
+Query membrane state
+.RS
+.nf
+struct psystem_state_info {
+    uint32_t membrane_count;
+    uint32_t object_count;
+    uint64_t evolution_steps;
+    uint64_t last_evolution_ns;
+};
+.fi
+.RE
+.SH P-LINGUA SYNTAX
+P-lingua is the formal language for P-systems:
+.SS Model Definition
+.nf
+@model<my_system>();
+.fi
+.SS Membrane Structure
+.nf
+@mu = [[]'2]'1[]'0;
+.fi
+.PP
+Defines three membranes: skin (0), containing membrane 1,
+which contains membrane 2.
+.SS Evolution Rules
+.nf
+[a]'1 \-> [b b]'1;
+.fi
+.PP
+In membrane 1, object
+.I a
+becomes two
+.I b
+objects.
+.SS Communication Rules
+.nf
+[a]'1 \-> []'here [b]'out;
+.fi
+.PP
+Object
+.I a
+in membrane 1 sends
+.I b
+to parent.
+.SS Priority Rules
+.nf
+[a]'1 \-> [b]'1 {priority: 5};
+.fi
+.PP
+Rule with priority 5 (higher priority = earlier execution).
+.SH PERFORMANCE
+Real-time performance characteristics:
+.TP
+.B Rule application
+10\(mus maximum latency per rule
+.TP
+.B Evolution step
+Bounded by rule count \(mu 10\(mus
+.TP
+.B Communication
+5\(mus inter-membrane communication
+.TP
+.B Division
+50\(mus membrane division overhead
+.SH FILES
+.TP
+.I /dev/dtesn/membrane
+Membrane control device
+.TP
+.I /sys/class/dtesn/membrane[0-N]
+Individual membrane devices
+.TP
+.I /proc/dtesn/membranes
+Membrane hierarchy and statistics
+.SH EXAMPLES
+.SS Creating Membrane System
+.nf
+#include <dtesn/psystem.h>
+
+int fd = open("/dev/dtesn/membrane", O_RDWR);
+
+/* Create skin membrane */
+struct psystem_create_params skin = {
+    .label = "skin",
+    .depth_level = 0,
+    .parent_id = 0
+};
+int skin_id = ioctl(fd, PSYSTEM_IOC_CREATE_MEMBRANE, &skin);
+
+/* Create inner membrane */
+struct psystem_create_params inner = {
+    .label = "inner",
+    .depth_level = 1,
+    .parent_id = skin_id
+};
+int inner_id = ioctl(fd, PSYSTEM_IOC_CREATE_MEMBRANE, &inner);
+.fi
+.SS Adding Objects and Rules
+.nf
+/* Add objects to inner membrane */
+struct psystem_add_object_params obj = {
+    .membrane_id = inner_id,
+    .symbol = "a",
+    .multiplicity = 5
+};
+ioctl(fd, PSYSTEM_IOC_ADD_OBJECT, &obj);
+
+/* Add evolution rule */
+struct psystem_add_rule_params rule = {
+    .membrane_id = inner_id,
+    .lhs = "[a]'inner",
+    .rhs = "[b b]'inner",
+    .priority = 1,
+    .rule_type = DTESN_PSYSTEM_RULE_EVOLUTION
+};
+ioctl(fd, PSYSTEM_IOC_ADD_RULE, &rule);
+.fi
+.SS Evolution Step
+.nf
+struct psystem_evolve_params evolve = {
+    .system_id = 0,
+    .max_steps = 100,
+    .parallel = true
+};
+
+ioctl(fd, PSYSTEM_IOC_EVOLVE, &evolve);
+.fi
+.SH ERRORS
+.TP
+.B PSYSTEM_EINVAL
+Invalid membrane structure or parameters
+.TP
+.B PSYSTEM_EVALIDATION
+OEIS A000081 compliance violation
+.TP
+.B PSYSTEM_ENOTIME
+Real-time constraint violation
+.TP
+.B PSYSTEM_EDIVISION
+Division would exceed membrane limits
+.SH SEE ALSO
+.BR dtesn (4),
+.BR esn (4),
+.BR bseries (4),
+.BR plingua (7)
+.PP
+P-lingua specification:
+.br
+http://www.p-lingua.org/
+.SH REFERENCES
+.IP [1]
+Gheorghe P\(uaan, "Membrane Computing: An Introduction"
+.IP [2]
+OEIS A000081 - Number of unlabeled rooted trees
+.IP [3]
+P-lingua specification and formal semantics
+.SH AUTHORS
+Echo.Kern Development Team
+.br
+https://github.com/cogpy/echo.kern

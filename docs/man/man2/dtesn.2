@@ -1,0 +1,365 @@
+.\" DTESN System Calls Manual Page
+.\" ================================
+.\" System call interface for Deep Tree Echo State Networks
+.\"
+.TH DTESN 2 "2024-10-24" "Echo.Kern v1.0" "System Calls"
+.SH NAME
+dtesn_create, dtesn_evolve, dtesn_get_state, dtesn_destroy \- DTESN system calls
+.SH SYNOPSIS
+.nf
+.B #include <dtesn/dtesn.h>
+.sp
+.BI "int dtesn_create(const struct dtesn_create_params *" params );
+.BI "int dtesn_evolve(const struct dtesn_evolve_params *" params );
+.BI "int dtesn_get_state(int " fd ", struct dtesn_state_info *" state );
+.BI "int dtesn_destroy(int " fd );
+.sp
+.BI "int sys_membrane_op(const struct dtesn_membrane_op_params *" params );
+.BI "int sys_bseries_compute(const struct dtesn_bseries_params *" params );
+.BI "int sys_esn_update(const struct dtesn_esn_params *" params );
+.fi
+.SH DESCRIPTION
+The DTESN system calls provide low-level kernel access to Deep Tree
+Echo State Networks functionality. These are native system calls with
+optimized x86_64 assembly entry points for minimal overhead.
+.SH SYSTEM CALLS
+.SS dtesn_create
+Create a new DTESN reservoir instance.
+.PP
+.nf
+int dtesn_create(const struct dtesn_create_params *params);
+.fi
+.PP
+.I params
+specifies reservoir configuration:
+.PP
+.nf
+struct dtesn_create_params {
+    uint32_t reservoir_size;
+    uint32_t input_size;
+    uint32_t output_size;
+    float spectral_radius;
+    float input_scaling;
+    float leak_rate;
+    uint32_t sparse_connectivity;
+    uint32_t flags;
+};
+.fi
+.PP
+Returns file descriptor on success, negative error code on failure.
+.PP
+.B Real-time constraint:
+\(le 100\(mus creation time
+.SS dtesn_evolve
+Evolve reservoir state with input.
+.PP
+.nf
+int dtesn_evolve(const struct dtesn_evolve_params *params);
+.fi
+.PP
+.I params
+specifies evolution parameters:
+.PP
+.nf
+struct dtesn_evolve_params {
+    int fd;
+    const float *input;
+    uint32_t input_size;
+    uint32_t steps;
+    uint32_t flags;
+};
+.fi
+.PP
+Returns number of steps completed, negative error code on failure.
+.PP
+.B Real-time constraint:
+\(le 1ms per step
+.SS dtesn_get_state
+Query reservoir state information.
+.PP
+.nf
+int dtesn_get_state(int fd, struct dtesn_state_info *state);
+.fi
+.PP
+.I state
+receives current state:
+.PP
+.nf
+struct dtesn_state_info {
+    float *state_vector;
+    uint32_t state_size;
+    float *output_vector;
+    uint32_t output_size;
+    uint64_t timestamp_ns;
+    uint64_t update_count;
+};
+.fi
+.PP
+Returns 0 on success, negative error code on failure.
+.PP
+.B Real-time constraint:
+\(le 50\(mus query time
+.SS dtesn_destroy
+Destroy reservoir and free resources.
+.PP
+.nf
+int dtesn_destroy(int fd);
+.fi
+.PP
+Returns 0 on success, negative error code on failure.
+.PP
+.B Real-time constraint:
+\(le 500\(mus cleanup time
+.SS sys_membrane_op
+Execute P-system membrane operation.
+.PP
+.nf
+int sys_membrane_op(const struct dtesn_membrane_op_params *params);
+.fi
+.PP
+.I params
+specifies membrane operation:
+.PP
+.nf
+struct dtesn_membrane_op_params {
+    uint32_t operation;      /* CREATE/EVOLVE/COMMUNICATE */
+    uint32_t membrane_id;
+    const void *data;
+    uint32_t data_size;
+};
+.fi
+.PP
+.B Real-time constraint:
+\(le 10\(mus per operation
+.SS sys_bseries_compute
+Compute B-series elementary differential.
+.PP
+.nf
+int sys_bseries_compute(const struct dtesn_bseries_params *params);
+.fi
+.PP
+.I params
+specifies tree and computation:
+.PP
+.nf
+struct dtesn_bseries_params {
+    const char *tree_expr;
+    uint32_t order;
+    const float *state;
+    uint32_t state_size;
+    float *result;
+    uint32_t flags;
+};
+.fi
+.PP
+.B Real-time constraint:
+\(le 100\(mus per computation
+.SS sys_esn_update
+Fast ESN reservoir state update.
+.PP
+.nf
+int sys_esn_update(const struct dtesn_esn_params *params);
+.fi
+.PP
+.I params
+specifies update parameters:
+.PP
+.nf
+struct dtesn_esn_params {
+    int fd;
+    const float *input;
+    uint32_t input_size;
+    float *output;
+    uint32_t output_size;
+    uint32_t flags;
+};
+.fi
+.PP
+.B Real-time constraint:
+\(le 1ms per update
+.SH RETURN VALUE
+On success, system calls return:
+.IP \(bu 2
+.B dtesn_create:
+file descriptor (non-negative)
+.IP \(bu 2
+.B dtesn_evolve:
+number of evolution steps completed
+.IP \(bu 2
+.B dtesn_get_state, dtesn_destroy:
+0
+.IP \(bu 2
+.B sys_membrane_op, sys_bseries_compute, sys_esn_update:
+0 or operation-specific value
+.PP
+On error, all calls return negative error codes.
+.SH ERRORS
+.TP
+.B \-EINVAL (DTESN_EINVAL)
+Invalid parameters or configuration
+.TP
+.B \-ENOMEM (DTESN_ENOMEM)
+Insufficient memory
+.TP
+.B \-EBADF (DTESN_EBADF)
+Invalid file descriptor
+.TP
+.B \-EFAULT (DTESN_EFAULT)
+Bad user-space pointer
+.TP
+.B \-ETIME (DTESN_ENOTIME)
+Real-time constraint violation
+.TP
+.B \-EDOM (DTESN_EVALIDATION)
+OEIS A000081 compliance violation
+.TP
+.B \-EBUSY (DTESN_EBUSY)
+Resource in use
+.TP
+.B \-ENOSPC (DTESN_ENOSPC)
+Maximum capacity reached
+.SH ARCHITECTURE
+.SS x86_64 Entry Points
+System calls have optimized assembly entry points in
+.IR arch/x86/dtesn/syscall_entry.S :
+.PP
+.nf
+    sys_dtesn_create_entry
+    sys_dtesn_evolve_entry
+    sys_dtesn_get_state_entry
+    sys_dtesn_destroy_entry
+    sys_membrane_op_entry
+    sys_bseries_compute_entry
+    sys_esn_update_entry
+.fi
+.PP
+Entry overhead: \(le 50ns per call
+.SS Calling Convention
+x86_64 follows standard calling convention:
+.PP
+.nf
+    rdi = first parameter
+    rsi = second parameter
+    rdx = third parameter
+    rcx = fourth parameter
+    r8  = fifth parameter
+    r9  = sixth parameter
+.fi
+.PP
+Return value in
+.IR rax .
+.SS Parameter Validation
+Entry points perform:
+.IP \(bu 2
+Null pointer checks
+.IP \(bu 2
+Canonical address validation
+.IP \(bu 2
+Parameter range validation
+.IP \(bu 2
+Fast-path optimization for common cases
+.SH PERFORMANCE
+System call overhead breakdown:
+.PP
+.nf
+    Entry validation:     25ns
+    Parameter copy:       50ns
+    Core operation:       varies
+    Return path:          20ns
+    Total overhead:       ~95ns
+.fi
+.PP
+For comparison, standard Linux system calls: ~150-300ns
+.SH EXAMPLES
+.SS Direct System Call
+.nf
+#include <dtesn/dtesn.h>
+#include <unistd.h>
+
+struct dtesn_create_params params = {
+    .reservoir_size = 1000,
+    .input_size = 10,
+    .output_size = 5,
+    .spectral_radius = 0.95f,
+    .input_scaling = 1.0f,
+    .leak_rate = 0.3f,
+    .sparse_connectivity = 10,
+    .flags = 0
+};
+
+int fd = dtesn_create(&params);
+if (fd < 0) {
+    fprintf(stderr, "dtesn_create failed: %d\\n", fd);
+    exit(1);
+}
+.fi
+.SS Evolution Loop
+.nf
+float input[10];
+struct dtesn_evolve_params evolve = {
+    .fd = fd,
+    .input = input,
+    .input_size = 10,
+    .steps = 1,
+    .flags = 0
+};
+
+for (int i = 0; i < 1000; i++) {
+    /* Prepare input */
+    for (int j = 0; j < 10; j++) {
+        input[j] = /* input data */;
+    }
+    
+    /* Evolve reservoir */
+    int steps = dtesn_evolve(&evolve);
+    if (steps < 0) {
+        fprintf(stderr, "Evolution failed: %d\\n", steps);
+        break;
+    }
+}
+.fi
+.SS Query State
+.nf
+struct dtesn_state_info state;
+float state_buf[1000];
+float output_buf[5];
+
+state.state_vector = state_buf;
+state.state_size = 1000;
+state.output_vector = output_buf;
+state.output_size = 5;
+
+if (dtesn_get_state(fd, &state) == 0) {
+    printf("Update count: %lu\\n", state.update_count);
+    printf("Timestamp: %lu ns\\n", state.timestamp_ns);
+}
+.fi
+.SS Cleanup
+.nf
+dtesn_destroy(fd);
+close(fd);
+.fi
+.SH NOTES
+.IP \(bu 2
+System calls are atomic and thread-safe
+.IP \(bu 2
+Multiple reservoirs can be created per process
+.IP \(bu 2
+File descriptors are process-local
+.IP \(bu 2
+Real-time scheduling improves performance
+.IP \(bu 2
+CPU affinity can reduce jitter
+.SH SEE ALSO
+.BR dtesn (4),
+.BR psystem (4),
+.BR esn (4),
+.BR bseries (4),
+.BR syscalls (2),
+.BR ioctl (2)
+.SH STANDARDS
+System calls follow Linux kernel conventions and x86_64 ABI.
+.SH AUTHORS
+Echo.Kern Development Team
+.br
+https://github.com/cogpy/echo.kern
