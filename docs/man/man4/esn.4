@@ -1,0 +1,333 @@
+.\" Echo State Network Reservoir Computing Manual Page
+.\" ===================================================
+.\" ESN reservoir computing interface for Echo.Kern
+.\"
+.TH ESN 4 "2024-10-24" "Echo.Kern v1.0" "Kernel Interfaces"
+.SH NAME
+esn \- Echo State Network reservoir computing kernel interface
+.SH SYNOPSIS
+.nf
+.B #include <dtesn/esn.h>
+.sp
+.BI "int fd = open(" "\"/dev/dtesn/reservoir\"" ", " flags );
+.fi
+.SH DESCRIPTION
+The
+.B esn
+kernel interface provides Echo State Network (ESN) reservoir
+computing for real-time temporal pattern processing. ESNs are
+recurrent neural networks with a fixed, randomly initialized
+reservoir and trained output layer.
+.PP
+Key properties:
+.IP \(bu 2
+.B Echo State Property
+\- Asymptotic state independence from initial conditions
+.IP \(bu 2
+.B Sparse Connectivity
+\- Efficient memory and computation
+.IP \(bu 2
+.B Real-time Updates
+\- \(le 1ms state propagation
+.IP \(bu 2
+.B Hardware Acceleration
+\- SIMD, GPU, neuromorphic support
+.SH RESERVOIR STRUCTURE
+.nf
+struct dtesn_esn_reservoir_t {
+    uint32_t reservoir_id;         /* Unique identifier */
+    char name[64];                 /* Reservoir name */
+    dtesn_esn_config_t config;     /* Configuration */
+    
+    /* Network matrices */
+    dtesn_esn_sparse_matrix_t *W_res;  /* Reservoir weights */
+    dtesn_esn_sparse_matrix_t *W_in;   /* Input weights */
+    float *W_out;                  /* Output weights */
+    float *bias;                   /* Bias vector */
+    
+    /* State vectors */
+    float *x_current;              /* Current state */
+    float *x_previous;             /* Previous state */
+    float *u_current;              /* Current input */
+    float *y_current;              /* Current output */
+    
+    /* Adaptation state */
+    float current_spectral_radius;
+    float adaptation_rate;
+};
+.fi
+.SH CONFIGURATION
+.nf
+struct dtesn_esn_config_t {
+    uint32_t reservoir_size;       /* Number of neurons */
+    uint32_t input_size;           /* Input dimension */
+    uint32_t output_size;          /* Output dimension */
+    float spectral_radius;         /* Echo state property */
+    float input_scaling;           /* Input weight scale */
+    float leak_rate;              /* Leaking rate (0-1) */
+    float noise_level;            /* Noise amplitude */
+    uint32_t sparse_connectivity; /* Average connections */
+    dtesn_esn_activation_t activation;  /* Activation function */
+    bool use_bias;                /* Bias vector flag */
+};
+.fi
+.SH SPECTRAL RADIUS
+The spectral radius \(rh controls the echo state property:
+.PP
+.nf
+    \(rh < 1  \-> Asymptotically stable (required for ESP)
+    \(rh = 1  \-> Critical regime (long memory)
+    \(rh > 1  \-> Unstable (no echo state property)
+.fi
+.PP
+Typical values: 0.8 \(le \(rh \(le 0.95
+.SH ACTIVATION FUNCTIONS
+Supported neuron activation functions:
+.TP
+.B DTESN_ESN_ACTIVATION_TANH
+Hyperbolic tangent (default): tanh(x)
+.TP
+.B DTESN_ESN_ACTIVATION_SIGMOID
+Logistic sigmoid: 1/(1+exp(\-x))
+.TP
+.B DTESN_ESN_ACTIVATION_RELU
+Rectified linear: max(0, x)
+.TP
+.B DTESN_ESN_ACTIVATION_LINEAR
+Linear: x
+.SH STATE UPDATE
+Reservoir state evolution follows:
+.PP
+.nf
+    x(t+1) = (1\-\(al)x(t) + \(al f(W_res x(t) + W_in u(t) + bias)
+    y(t+1) = W_out x(t+1)
+.fi
+.PP
+Where:
+.IP \(bu 2
+.I x(t)
+is reservoir state at time
+.I t
+.IP \(bu 2
+.I u(t)
+is input at time
+.I t
+.IP \(bu 2
+.I \(al
+is leak rate (0 = no leaking, 1 = full leaking)
+.IP \(bu 2
+.I f
+is activation function
+.SH IOCTL OPERATIONS
+.TP
+.B ESN_IOC_CREATE
+Create reservoir with configuration
+.RS
+.nf
+struct esn_create_params {
+    dtesn_esn_config_t config;
+    const char *name;
+};
+.fi
+.RE
+.TP
+.B ESN_IOC_UPDATE
+Update reservoir state with input
+.RS
+.nf
+struct esn_update_params {
+    uint32_t reservoir_id;
+    const float *input;
+    uint32_t input_size;
+    float *output;           /* Output buffer */
+    uint32_t output_size;
+};
+.fi
+.RE
+.TP
+.B ESN_IOC_TRAIN
+Train output weights
+.RS
+.nf
+struct esn_train_params {
+    uint32_t reservoir_id;
+    const float **states;    /* Collected states */
+    const float **targets;   /* Target outputs */
+    uint32_t num_samples;
+    float regularization;    /* Ridge parameter */
+};
+.fi
+.RE
+.TP
+.B ESN_IOC_RESET
+Reset reservoir state
+.RS
+.nf
+struct esn_reset_params {
+    uint32_t reservoir_id;
+    bool randomize;         /* Randomize or zero */
+};
+.fi
+.RE
+.TP
+.B ESN_IOC_GET_STATE
+Retrieve reservoir state
+.RS
+.nf
+struct esn_state_info {
+    float *state_vector;
+    uint32_t state_size;
+    float spectral_radius;
+    uint64_t update_count;
+    uint64_t avg_update_time_ns;
+};
+.fi
+.RE
+.TP
+.B ESN_IOC_ADAPT
+Adaptive spectral radius adjustment
+.RS
+.nf
+struct esn_adapt_params {
+    uint32_t reservoir_id;
+    float target_radius;
+    uint32_t adaptation_steps;
+};
+.fi
+.RE
+.SH HARDWARE ACCELERATION
+ESN operations support multiple acceleration backends:
+.TP
+.B CPU SIMD
+AVX2/SSE optimized sparse matrix operations
+.TP
+.B GPU
+CUDA/OpenCL acceleration for large reservoirs
+.TP
+.B FPGA
+Dedicated hardware for ultra-low latency
+.TP
+.B Neuromorphic
+Intel Loihi, SpiNNaker, BrainScaleS support
+.PP
+Backend is selected automatically based on available hardware.
+Query with:
+.PP
+.nf
+    ioctl(fd, ESN_IOC_GET_ACCEL_INFO, &info);
+.fi
+.SH PERFORMANCE
+Real-time performance targets:
+.TP
+.B State Update
+\(le 1ms for 1000-neuron reservoir
+.TP
+.B Training
+\(le 100ms for 10000 samples
+.TP
+.B Adaptation
+\(le 10\(mus per step
+.PP
+Actual performance depends on:
+.IP \(bu 2
+Reservoir size
+.IP \(bu 2
+Sparse connectivity
+.IP \(bu 2
+Hardware acceleration
+.IP \(bu 2
+CPU scheduling priority
+.SH FILES
+.TP
+.I /dev/dtesn/reservoir
+Reservoir control device
+.TP
+.I /sys/class/dtesn/reservoir[0-N]
+Individual reservoir sysfs entries
+.TP
+.I /proc/dtesn/reservoirs
+Reservoir statistics and performance
+.SH EXAMPLES
+.SS Creating Reservoir
+.nf
+#include <dtesn/esn.h>
+
+int fd = open("/dev/dtesn/reservoir", O_RDWR);
+
+struct esn_create_params params = {
+    .config = {
+        .reservoir_size = 1000,
+        .input_size = 10,
+        .output_size = 5,
+        .spectral_radius = 0.95f,
+        .input_scaling = 1.0f,
+        .leak_rate = 0.3f,
+        .sparse_connectivity = 10,
+        .activation = DTESN_ESN_ACTIVATION_TANH,
+        .use_bias = true
+    },
+    .name = "time_series_predictor"
+};
+
+int res_id = ioctl(fd, ESN_IOC_CREATE, &params);
+.fi
+.SS Updating State
+.nf
+float input[10] = { /* input data */ };
+float output[5];
+
+struct esn_update_params update = {
+    .reservoir_id = res_id,
+    .input = input,
+    .input_size = 10,
+    .output = output,
+    .output_size = 5
+};
+
+ioctl(fd, ESN_IOC_UPDATE, &update);
+.fi
+.SS Training
+.nf
+/* Collect states during warmup */
+float **states = /* collected states */;
+float **targets = /* target outputs */;
+
+struct esn_train_params train = {
+    .reservoir_id = res_id,
+    .states = (const float **)states,
+    .targets = (const float **)targets,
+    .num_samples = 1000,
+    .regularization = 1e-6f
+};
+
+ioctl(fd, ESN_IOC_TRAIN, &train);
+.fi
+.SH ERRORS
+.TP
+.B ESN_EINVAL
+Invalid configuration or parameters
+.TP
+.B ESN_ENOMEM
+Insufficient memory
+.TP
+.B ESN_ENOTIME
+Real-time constraint violation
+.TP
+.B ESN_ENOHW
+Required hardware not available
+.SH SEE ALSO
+.BR dtesn (4),
+.BR psystem (4),
+.BR bseries (4),
+.BR neuromorphic (7)
+.SH REFERENCES
+.IP [1]
+Jaeger, "The echo state approach to analysing and training recurrent neural networks" (2001)
+.IP [2]
+Lukoševičius and Jaeger, "Reservoir computing approaches to recurrent neural network training" (2009)
+.IP [3]
+Verstraeten et al., "An experimental unification of reservoir computing methods" (2007)
+.SH AUTHORS
+Echo.Kern Development Team
+.br
+https://github.com/cogpy/echo.kern

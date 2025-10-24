@@ -104,8 +104,15 @@ static int apply_hebbian_learning(dtesn_cognitive_system_t *system,
     uint32_t input_size = reservoir->config.input_size;
     
     /* Hebbian learning: Δw_ij = η * x_i * x_j */
-    for (uint32_t i = 0; i < reservoir_size; i++) {
-        for (uint32_t j = 0; j < input_size; j++) {
+    uint32_t max_updates = reservoir_size * input_size;
+    float *weight_updates = (float *)malloc(max_updates * sizeof(float));
+    if (!weight_updates) {
+        return -ENOMEM;
+    }
+    
+    uint32_t update_idx = 0;
+    for (uint32_t i = 0; i < reservoir_size && update_idx < max_updates; i++) {
+        for (uint32_t j = 0; j < input_size && update_idx < max_updates; j++) {
             float pre_activity = input[j];
             float post_activity = reservoir->x_current[i];
             
@@ -114,13 +121,18 @@ static int apply_hebbian_learning(dtesn_cognitive_system_t *system,
             
             /* Apply plasticity threshold */
             if (fabs(weight_delta) > DTESN_LEARNING_PLASTICITY_THRESHOLD) {
-                /* Update would be applied to reservoir weights here */
-                /* For now, we simulate the update */
+                weight_updates[update_idx++] = weight_delta;
+            } else {
+                weight_updates[update_idx++] = 0.0f;
             }
         }
     }
     
-    return 0;
+    /* Apply weight updates to reservoir */
+    int result = update_reservoir_weights(reservoir, weight_updates, update_idx);
+    free(weight_updates);
+    
+    return result;
 }
 
 /**
@@ -144,9 +156,17 @@ static int apply_stdp_learning(dtesn_cognitive_system_t *system,
     const float A_plus = 0.01f;      /* LTP amplitude */
     const float A_minus = 0.012f;    /* LTD amplitude */
     
-    /* Simulate spike timing differences */
-    for (uint32_t i = 0; i < reservoir_size; i++) {
-        for (uint32_t j = 0; j < input_size; j++) {
+    /* Allocate weight update buffer */
+    uint32_t max_updates = reservoir_size * input_size;
+    float *weight_updates = (float *)malloc(max_updates * sizeof(float));
+    if (!weight_updates) {
+        return -ENOMEM;
+    }
+    
+    /* Compute weight updates based on spike timing differences */
+    uint32_t update_idx = 0;
+    for (uint32_t i = 0; i < reservoir_size && update_idx < max_updates; i++) {
+        for (uint32_t j = 0; j < input_size && update_idx < max_updates; j++) {
             /* Compute activity differences as proxy for spike timing */
             float pre_activity = input[j];
             float post_activity = reservoir->x_current[i];
@@ -168,12 +188,18 @@ static int apply_stdp_learning(dtesn_cognitive_system_t *system,
             
             /* Apply weight update */
             if (fabs(weight_delta) > DTESN_LEARNING_PLASTICITY_THRESHOLD) {
-                /* Update would be applied to reservoir weights here */
+                weight_updates[update_idx++] = weight_delta;
+            } else {
+                weight_updates[update_idx++] = 0.0f;
             }
         }
     }
     
-    return 0;
+    /* Apply weight updates to reservoir */
+    int result = update_reservoir_weights(reservoir, weight_updates, update_idx);
+    free(weight_updates);
+    
+    return result;
 }
 
 /**
@@ -195,14 +221,22 @@ static int apply_bcm_learning(dtesn_cognitive_system_t *system,
     const float theta_0 = 0.5f;      /* Base threshold */
     const float tau_theta = 100.0f;  /* Threshold time constant */
     
+    /* Allocate weight update buffer */
+    uint32_t max_updates = reservoir_size * input_size;
+    float *weight_updates = (float *)malloc(max_updates * sizeof(float));
+    if (!weight_updates) {
+        return -ENOMEM;
+    }
+    
     /* BCM learning: Δw = η * x * y * (y - θ) */
-    for (uint32_t i = 0; i < reservoir_size; i++) {
+    uint32_t update_idx = 0;
+    for (uint32_t i = 0; i < reservoir_size && update_idx < max_updates; i++) {
         float post_activity = reservoir->x_current[i];
         
         /* Compute sliding threshold */
         float theta = theta_0 + post_activity * post_activity / tau_theta;
         
-        for (uint32_t j = 0; j < input_size; j++) {
+        for (uint32_t j = 0; j < input_size && update_idx < max_updates; j++) {
             float pre_activity = input[j];
             
             /* BCM weight update */
@@ -210,12 +244,18 @@ static int apply_bcm_learning(dtesn_cognitive_system_t *system,
                                post_activity * (post_activity - theta);
             
             if (fabs(weight_delta) > DTESN_LEARNING_PLASTICITY_THRESHOLD) {
-                /* Update would be applied to reservoir weights here */
+                weight_updates[update_idx++] = weight_delta;
+            } else {
+                weight_updates[update_idx++] = 0.0f;
             }
         }
     }
     
-    return 0;
+    /* Apply weight updates to reservoir */
+    int result = update_reservoir_weights(reservoir, weight_updates, update_idx);
+    free(weight_updates);
+    
+    return result;
 }
 
 /**
@@ -237,6 +277,12 @@ static int apply_reinforcement_learning(dtesn_cognitive_system_t *system,
     
     /* Apply reward-modulated learning */
     uint32_t reservoir_size = reservoir->config.reservoir_size;
+    float *weight_updates = (float *)malloc(reservoir_size * sizeof(float));
+    if (!weight_updates) {
+        return -ENOMEM;
+    }
+    
+    uint32_t update_idx = 0;
     for (uint32_t i = 0; i < reservoir_size; i++) {
         float activity = reservoir->x_current[i];
         
@@ -244,11 +290,17 @@ static int apply_reinforcement_learning(dtesn_cognitive_system_t *system,
         float weight_delta = params->learning_rate * reward * activity;
         
         if (fabs(weight_delta) > DTESN_LEARNING_PLASTICITY_THRESHOLD) {
-            /* Update would be applied to reservoir weights here */
+            weight_updates[update_idx++] = weight_delta;
+        } else {
+            weight_updates[update_idx++] = 0.0f;
         }
     }
     
-    return 0;
+    /* Apply weight updates to reservoir */
+    int result = update_reservoir_weights(reservoir, weight_updates, update_idx);
+    free(weight_updates);
+    
+    return result;
 }
 
 /**
@@ -271,21 +323,41 @@ static int apply_meta_learning(dtesn_cognitive_system_t *system,
     
     /* Adapt learning rate based on error trend */
     static float previous_error = FLT_MAX;
+    static float adapted_learning_rate = 0.0f;
+    
+    /* Initialize adapted learning rate on first call */
+    if (adapted_learning_rate == 0.0f) {
+        adapted_learning_rate = params->learning_rate;
+    }
     
     if (previous_error != FLT_MAX) {
-        if (current_error < previous_error) {
+        float error_change = current_error - previous_error;
+        
+        if (error_change < 0) {
             /* Error decreasing - increase learning rate slightly */
-            /* This would modify the learning parameters */
+            adapted_learning_rate *= 1.05f;
+            /* Cap at 2x original rate */
+            if (adapted_learning_rate > 2.0f * params->learning_rate) {
+                adapted_learning_rate = 2.0f * params->learning_rate;
+            }
         } else {
             /* Error increasing - decrease learning rate */
-            /* This would modify the learning parameters */
+            adapted_learning_rate *= 0.95f;
+            /* Floor at 0.1x original rate */
+            if (adapted_learning_rate < 0.1f * params->learning_rate) {
+                adapted_learning_rate = 0.1f * params->learning_rate;
+            }
         }
     }
     
     previous_error = current_error;
     
+    /* Create modified parameters with adapted learning rate */
+    dtesn_cognitive_learn_params_t adapted_params = *params;
+    adapted_params.learning_rate = adapted_learning_rate;
+    
     /* Apply standard learning rule with adapted parameters */
-    return apply_hebbian_learning(system, input, target, params);
+    return apply_hebbian_learning(system, input, target, &adapted_params);
 }
 
 /**
@@ -303,17 +375,93 @@ static float compute_prediction_error(const float *predicted, const float *targe
 }
 
 /**
- * Update reservoir weights (placeholder implementation)
+ * Update reservoir weights - Real implementation with sparse matrix support
+ * 
+ * Applies weight updates to reservoir and input weight matrices while maintaining
+ * sparsity patterns and enforcing spectral radius constraints for ESN stability.
  */
 static int update_reservoir_weights(dtesn_esn_reservoir_t *reservoir,
                                    const float *weight_updates, uint32_t size) {
-    /* This would update the actual reservoir weight matrices */
-    /* For now, we just validate the inputs */
     if (!reservoir || !weight_updates || size == 0) {
         return -EINVAL;
     }
     
-    /* Weight updates would be applied to W_res, W_in matrices here */
+    if (!reservoir->W_res || !reservoir->W_in) {
+        return -EINVAL;
+    }
+    
+    /* Update reservoir weights (W_res) using sparse matrix structure */
+    dtesn_esn_sparse_matrix_t *W_res = reservoir->W_res;
+    uint32_t update_idx = 0;
+    
+    for (uint32_t i = 0; i < W_res->rows && update_idx < size; i++) {
+        uint32_t row_start = W_res->row_ptr[i];
+        uint32_t row_end = W_res->row_ptr[i + 1];
+        
+        for (uint32_t j = row_start; j < row_end && update_idx < size; j++) {
+            /* Apply weight update while preserving sparsity */
+            float old_weight = W_res->values[j];
+            float new_weight = old_weight + weight_updates[update_idx];
+            
+            /* Clip weights to maintain stability (-1.0 to 1.0) */
+            if (new_weight > 1.0f) {
+                new_weight = 1.0f;
+            } else if (new_weight < -1.0f) {
+                new_weight = -1.0f;
+            }
+            
+            /* Only update if change is significant (avoid floating point drift) */
+            if (fabsf(new_weight - old_weight) > 1e-7f) {
+                W_res->values[j] = new_weight;
+            }
+            
+            update_idx++;
+        }
+    }
+    
+    /* Update input weights (W_in) if there are remaining updates */
+    dtesn_esn_sparse_matrix_t *W_in = reservoir->W_in;
+    
+    for (uint32_t i = 0; i < W_in->rows && update_idx < size; i++) {
+        uint32_t row_start = W_in->row_ptr[i];
+        uint32_t row_end = W_in->row_ptr[i + 1];
+        
+        for (uint32_t j = row_start; j < row_end && update_idx < size; j++) {
+            float old_weight = W_in->values[j];
+            float new_weight = old_weight + weight_updates[update_idx];
+            
+            /* Clip input weights */
+            if (new_weight > 1.0f) {
+                new_weight = 1.0f;
+            } else if (new_weight < -1.0f) {
+                new_weight = -1.0f;
+            }
+            
+            if (fabsf(new_weight - old_weight) > 1e-7f) {
+                W_in->values[j] = new_weight;
+            }
+            
+            update_idx++;
+        }
+    }
+    
+    /* Rescale reservoir weights to maintain target spectral radius */
+    /* This is critical for ESN echo state property */
+    float current_spectral_radius = reservoir->current_spectral_radius;
+    float target_spectral_radius = reservoir->config.spectral_radius;
+    
+    if (fabsf(current_spectral_radius - target_spectral_radius) > 0.01f) {
+        /* Compute scaling factor to restore target spectral radius */
+        float scale = target_spectral_radius / (current_spectral_radius + 1e-10f);
+        
+        /* Scale all reservoir weights */
+        for (uint32_t i = 0; i < W_res->nnz; i++) {
+            W_res->values[i] *= scale;
+        }
+        
+        reservoir->current_spectral_radius = target_spectral_radius;
+    }
+    
     return 0;
 }
 

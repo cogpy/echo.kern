@@ -1,0 +1,311 @@
+.\" DTESN Kernel Interface Manual Page
+.\" ====================================
+.\" Deep Tree Echo State Networks Kernel Module Documentation
+.\" OEIS A000081-compliant neuromorphic computing interface
+.\"
+.TH DTESN 4 "2024-10-24" "Echo.Kern v1.0" "Kernel Interfaces"
+.SH NAME
+dtesn \- Deep Tree Echo State Networks kernel module
+.SH SYNOPSIS
+.nf
+.B #include <dtesn/dtesn.h>
+.sp
+.BI "int fd = open(" "\"/dev/dtesn\"" ", " flags );
+.sp
+.BI "int ioctl(int " fd ", " request ", ...);"
+.fi
+.SH DESCRIPTION
+The
+.B dtesn
+kernel module provides native support for Deep Tree Echo State Networks,
+a neuromorphic computing architecture based on three foundational components:
+.IP \(bu 2
+.B P-System Membrane Computing
+\- Hierarchical membrane structures for parallel computation
+.IP \(bu 2
+.B B-Series Rooted Tree Ridges
+\- Elementary differential computation for ODE integration
+.IP \(bu 2
+.B Echo State Networks (ESN)
+\- Reservoir computing with temporal dynamics
+.PP
+All components follow OEIS A000081 enumeration for rooted tree structures,
+providing mathematical rigor and real-time determinism.
+.SH DEVICE FILES
+The module creates the following device nodes:
+.TP
+.B /dev/dtesn
+Main DTESN control device for creating and managing reservoirs
+.TP
+.B /dev/dtesn/reservoir[0-N]
+Individual reservoir devices (created dynamically)
+.TP
+.B /dev/dtesn/membrane[0-N]
+P-system membrane devices for membrane computing operations
+.TP
+.B /sys/class/dtesn_neuro/
+Sysfs interface for neuromorphic hardware devices
+.SH IOCTL OPERATIONS
+The following
+.BR ioctl (2)
+operations are supported on DTESN device files:
+.SS Reservoir Operations
+.TP
+.B DTESN_IOC_CREATE
+Create a new ESN reservoir with specified configuration
+.RS
+.nf
+struct dtesn_create_params {
+    uint32_t reservoir_size;   /* Number of neurons */
+    uint32_t input_size;       /* Input dimension */
+    uint32_t output_size;      /* Output dimension */
+    float spectral_radius;     /* Echo state property */
+    float input_scaling;       /* Input weight scaling */
+    float leak_rate;          /* Leaking rate */
+    uint32_t sparse_connectivity; /* Sparsity level */
+};
+.fi
+.RE
+.TP
+.B DTESN_IOC_EVOLVE
+Evolve reservoir state with input vector
+.RS
+.nf
+struct dtesn_evolve_params {
+    int fd;                   /* Reservoir file descriptor */
+    const float *input;       /* Input vector */
+    uint32_t input_size;      /* Input dimension */
+    uint32_t steps;           /* Evolution steps */
+};
+.fi
+.RE
+.TP
+.B DTESN_IOC_GET_STATE
+Retrieve current reservoir state
+.RS
+.nf
+struct dtesn_state_info {
+    float *state_vector;      /* Current state */
+    uint32_t state_size;      /* State dimension */
+    float *output_vector;     /* Current output */
+    uint32_t output_size;     /* Output dimension */
+    uint64_t timestamp_ns;    /* State timestamp */
+};
+.fi
+.RE
+.TP
+.B DTESN_IOC_TRAIN
+Train output weights using ridge regression
+.RS
+.nf
+struct dtesn_train_params {
+    const float *target;      /* Target output */
+    uint32_t target_size;     /* Target dimension */
+    float regularization;     /* Ridge parameter */
+};
+.fi
+.RE
+.SS Membrane Computing Operations
+.TP
+.B DTESN_IOC_MEMBRANE_CREATE
+Create P-system membrane with specified depth
+.RS
+.nf
+struct dtesn_membrane_create_params {
+    const char *label;        /* Membrane label */
+    uint32_t depth_level;     /* OEIS A000081 depth */
+    uint32_t parent_id;       /* Parent membrane ID */
+};
+.fi
+.RE
+.TP
+.B DTESN_IOC_MEMBRANE_EVOLVE
+Apply P-lingua rules to membrane
+.RS
+.nf
+struct dtesn_membrane_evolve_params {
+    uint32_t membrane_id;     /* Target membrane */
+    uint32_t max_steps;       /* Evolution steps */
+    bool parallel;            /* Parallel evolution */
+};
+.fi
+.RE
+.TP
+.B DTESN_IOC_MEMBRANE_COMMUNICATE
+Execute communication rules between membranes
+.SS B-Series Operations
+.TP
+.B DTESN_IOC_BSERIES_COMPUTE
+Compute elementary differential for ODE integration
+.RS
+.nf
+struct dtesn_bseries_params {
+    const char *tree_expr;    /* Tree notation */
+    uint32_t order;           /* Tree order */
+    float *coefficients;      /* Output coefficients */
+};
+.fi
+.RE
+.SH REAL-TIME CONSTRAINTS
+The DTESN kernel module provides hard real-time guarantees:
+.TP
+.B Membrane Evolution
+\(le 10\(mus maximum latency for P-system rule application
+.TP
+.B B-Series Computation
+\(le 100\(mus for elementary differential evaluation
+.TP
+.B ESN State Update
+\(le 1ms for reservoir state propagation
+.TP
+.B Context Switch
+\(le 5\(mus for real-time task switching
+.PP
+These constraints are enforced through priority scheduling and
+preemptible kernel paths. Violations are logged to
+.I /sys/kernel/debug/dtesn/timing_violations.
+.SH OEIS A000081 COMPLIANCE
+All hierarchical structures follow OEIS A000081 enumeration:
+.PP
+.nf
+    Depth    Maximum Count
+    0        1
+    1        1
+    2        2
+    3        4
+    4        9
+    5        20
+    6        48
+    7        115
+    8        286
+.fi
+.PP
+Attempts to create structures violating this enumeration return
+.B DTESN_EVALIDATION
+error code.
+.SH FILES
+.TP
+.I /dev/dtesn
+Main device node
+.TP
+.I /sys/module/dtesn/parameters/
+Module parameters (max_reservoirs, default_sparsity, etc.)
+.TP
+.I /sys/kernel/debug/dtesn/
+Debug filesystem entries (requires CONFIG_DEBUG_FS)
+.TP
+.I /proc/dtesn/stats
+Performance statistics and monitoring
+.SH ERRORS
+DTESN operations can fail with the following errors:
+.TP
+.B DTESN_EINVAL (-EINVAL)
+Invalid parameters or configuration
+.TP
+.B DTESN_ENOMEM (-ENOMEM)
+Insufficient memory for allocation
+.TP
+.B DTESN_ENOTIME (-ETIME)
+Real-time constraint violated
+.TP
+.B DTESN_EVALIDATION (-EDOM)
+OEIS A000081 compliance violation
+.TP
+.B DTESN_EBUSY (-EBUSY)
+Resource currently in use
+.TP
+.B DTESN_ENOSPC (-ENOSPC)
+Maximum capacity reached
+.SH EXAMPLES
+.SS Creating an ESN Reservoir
+.nf
+#include <dtesn/dtesn.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+
+int fd = open("/dev/dtesn", O_RDWR);
+if (fd < 0) {
+    perror("open");
+    exit(1);
+}
+
+struct dtesn_create_params params = {
+    .reservoir_size = 1000,
+    .input_size = 10,
+    .output_size = 5,
+    .spectral_radius = 0.95f,
+    .input_scaling = 1.0f,
+    .leak_rate = 0.3f,
+    .sparse_connectivity = 10
+};
+
+int reservoir_fd = ioctl(fd, DTESN_IOC_CREATE, &params);
+if (reservoir_fd < 0) {
+    perror("ioctl");
+    exit(1);
+}
+.fi
+.SS Evolving Reservoir State
+.nf
+float input[10] = { /* input values */ };
+struct dtesn_evolve_params evolve = {
+    .fd = reservoir_fd,
+    .input = input,
+    .input_size = 10,
+    .steps = 1
+};
+
+if (ioctl(reservoir_fd, DTESN_IOC_EVOLVE, &evolve) < 0) {
+    perror("evolve");
+    exit(1);
+}
+.fi
+.SS Creating P-System Membrane
+.nf
+struct dtesn_membrane_create_params mem = {
+    .label = "skin",
+    .depth_level = 0,
+    .parent_id = 0
+};
+
+int membrane_id = ioctl(fd, DTESN_IOC_MEMBRANE_CREATE, &mem);
+.fi
+.SH SEE ALSO
+.BR psystem (4),
+.BR esn (4),
+.BR bseries (4),
+.BR dtesn (2),
+.BR open (2),
+.BR ioctl (2),
+.BR mmap (2)
+.PP
+Online documentation:
+.br
+https://github.com/cogpy/echo.kern/docs/
+.SH STANDARDS
+The DTESN kernel module implements:
+.IP \(bu 2
+OEIS A000081 rooted tree enumeration
+.IP \(bu 2
+P-lingua membrane computing specifications
+.IP \(bu 2
+B-series numerical ODE integration theory
+.IP \(bu 2
+Echo State Network reservoir computing principles
+.SH HISTORY
+The DTESN architecture was developed as part of the Echo.Kern project
+to provide native neuromorphic computing support in the Linux kernel.
+.SH AUTHORS
+Echo.Kern Development Team
+.br
+https://github.com/cogpy/echo.kern
+.SH BUGS
+Report bugs to: https://github.com/cogpy/echo.kern/issues
+.PP
+Known limitations:
+.IP \(bu 2
+Maximum reservoir size limited to 65536 neurons
+.IP \(bu 2
+P-system membrane depth limited to OEIS A000081 sequence length
+.IP \(bu 2
+Requires kernel version 5.10 or later for full real-time support
