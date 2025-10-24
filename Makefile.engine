@@ -1,0 +1,86 @@
+# Echo.Kern Makefile
+# 
+# Builds the ENGINE core components.
+
+# Compiler and flags
+CC = gcc
+AS = as
+LD = ld
+CFLAGS = -Wall -Wextra -std=c11 -O2 -fno-builtin -nostdlib -nostdinc -ffreestanding -mno-red-zone -mcmodel=kernel
+ASFLAGS = 
+LDFLAGS = -nostdlib -n -T kernel/linker.ld
+
+# Directories
+KERNEL_DIR = kernel
+ENGINE_DIR = $(KERNEL_DIR)/engine
+ARCH_DIR = $(KERNEL_DIR)/arch/x86_64
+INCLUDE_DIR = $(KERNEL_DIR)/include
+BUILD_DIR = build
+
+# Source files
+ENGINE_SOURCES = \
+	$(ENGINE_DIR)/oeis_table.c \
+	$(ENGINE_DIR)/hypergraph.c \
+	$(ENGINE_DIR)/bootstrap.c \
+	$(ENGINE_DIR)/event_loop.c \
+	$(ENGINE_DIR)/membrane.c
+
+ARCH_SOURCES = \
+	$(ARCH_DIR)/boot.S
+
+# Object files
+ENGINE_OBJECTS = $(ENGINE_SOURCES:$(ENGINE_DIR)/%.c=$(BUILD_DIR)/engine/%.o)
+ARCH_OBJECTS = $(ARCH_SOURCES:$(ARCH_DIR)/%.S=$(BUILD_DIR)/arch/%.o)
+
+ALL_OBJECTS = $(ENGINE_OBJECTS) $(ARCH_OBJECTS)
+
+# Output
+KERNEL_BIN = $(BUILD_DIR)/echo.kern
+
+# Default target
+.PHONY: all
+all: $(KERNEL_BIN)
+
+# Create directories
+$(BUILD_DIR)/engine $(BUILD_DIR)/arch:
+	mkdir -p $@
+
+# Compile C source files
+$(BUILD_DIR)/engine/%.o: $(ENGINE_DIR)/%.c | $(BUILD_DIR)/engine
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
+
+# Assemble assembly files
+$(BUILD_DIR)/arch/%.o: $(ARCH_DIR)/%.S | $(BUILD_DIR)/arch
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Link kernel
+$(KERNEL_BIN): $(ALL_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $^
+
+# Clean
+.PHONY: clean
+clean:
+	rm -rf $(BUILD_DIR)
+
+# Help
+.PHONY: help
+help:
+	@echo "Echo.Kern ENGINE Build System"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all       - Build kernel (default)"
+	@echo "  clean     - Remove build artifacts"
+	@echo "  help      - Show this help"
+	@echo ""
+	@echo "Output: $(KERNEL_BIN)"
+
+# Show configuration
+.PHONY: config
+config:
+	@echo "Configuration:"
+	@echo "  CC:       $(CC)"
+	@echo "  CFLAGS:   $(CFLAGS)"
+	@echo "  LD:       $(LD)"
+	@echo "  LDFLAGS:  $(LDFLAGS)"
+	@echo "  SOURCES:  $(words $(ENGINE_SOURCES) $(ARCH_SOURCES)) files"
+	@echo "  OUTPUT:   $(KERNEL_BIN)"
