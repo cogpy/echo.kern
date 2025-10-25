@@ -98,12 +98,24 @@ make docs && open docs/index.html
 
 ## 📖 Documentation
 
+### Core Documentation
+- **[README.md](README.md)** - Project overview and quick start (this file)
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development setup and contribution guidelines
+- **[DEVO-GENESIS.md](DEVO-GENESIS.md)** - Development milestones and roadmap
+
+### Kernel Development (NEW)
+- **[KERNEL_DEVELOPMENT_ROADMAP.md](KERNEL_DEVELOPMENT_ROADMAP.md)** - **Comprehensive ENGINE architecture and implementation roadmap**
+- **[KERNEL_STATUS_REPORT.md](KERNEL_STATUS_REPORT.md)** - Current implementation status and gap analysis
+- **[KERNEL_FUNCTION_MANIFEST.md](KERNEL_FUNCTION_MANIFEST.md)** - Complete categorized kernel API reference
+
+### Technical Specifications
 - **[DTESN Architecture](docs/DTESN-ARCHITECTURE.md)** - Detailed technical architecture
 - **[Kernel Specification](echo_kernel_specification.md)** - Complete implementation specification
+- **[Echo-Kernel Implementation Specification](Echo-Kernel Implementation Specification.md)** - Multi-level security architecture
+
+### Domain-Specific Guides
 - **[P-System Guide](plingua_guide.md)** - P-lingua membrane computing guide
 - **[Legacy Artifact Integration](docs/legacy-artifact-integration.md)** - Integration documentation for previous project artifacts
-- **[Development Roadmap](DEVO-GENESIS.md)** - Development milestones and roadmap
 
 ## 🔧 Development Status
 

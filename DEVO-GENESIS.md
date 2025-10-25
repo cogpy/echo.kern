@@ -2,6 +2,12 @@
 
 This document provides a detailed development roadmap for implementing the Echo.Kern operating system kernel with Deep Tree Echo State Networks (DTESN) support. This roadmap drives the automated issue generation system via the generate-next-steps.yml workflow.
 
+> **📘 NEW: Comprehensive Kernel Development Documentation**  
+> For detailed ENGINE architecture, implementation roadmap, and kernel function specifications, see:
+> - **[KERNEL_DEVELOPMENT_ROADMAP.md](KERNEL_DEVELOPMENT_ROADMAP.md)** - Complete ENGINE architecture and development plan
+> - **[KERNEL_STATUS_REPORT.md](KERNEL_STATUS_REPORT.md)** - Current status and gap analysis
+> - **[KERNEL_FUNCTION_MANIFEST.md](KERNEL_FUNCTION_MANIFEST.md)** - Categorized kernel API reference
+
 ## Overview
 
 Echo.Kern is a revolutionary real-time operating system kernel designed for neuromorphic computing, featuring native support for:
@@ -10,6 +16,7 @@ Echo.Kern is a revolutionary real-time operating system kernel designed for neur
 - **OEIS A000081 Foundation**: Mathematical topology based on unlabeled rooted tree enumeration  
 - **Real-time Neuromorphic Processing**: Hardware-optimized for event-driven, sparse computation
 - **Cognitive Computing Support**: Native kernel-level support for AI and machine learning workloads
+- **The ENGINE**: Computational impeller driving all kernel activity through nested bootstraps and event loops
 
 ## Architecture Flowchart
 
