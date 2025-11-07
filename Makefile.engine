@@ -23,7 +23,8 @@ ENGINE_SOURCES = \
 	$(ENGINE_DIR)/hypergraph.c \
 	$(ENGINE_DIR)/bootstrap.c \
 	$(ENGINE_DIR)/event_loop.c \
-	$(ENGINE_DIR)/membrane.c
+	$(ENGINE_DIR)/membrane.c \
+	$(ENGINE_DIR)/ggml_backend.c
 
 ARCH_SOURCES = \
 	$(ARCH_DIR)/boot.S
