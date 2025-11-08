@@ -9,8 +9,20 @@
 #include "../include/echo_types.h"
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 extern struct hgfs_node *hgfs_node_create(struct hypergraph_fs *hgfs, prime_t prime, exponent_t exp);
+
+/*
+ * event_loop_get_timestamp_ns - Get current timestamp in nanoseconds
+ * 
+ * Used for latency tracking and event timestamping.
+ */
+uint64_t event_loop_get_timestamp_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+}
 
 /*
  * event_loop_init - Initialize event loop
@@ -66,18 +78,19 @@ void event_loop_destroy(struct event_loop *loop) {
         struct event *event = loop->queue->head;
         while (event) {
             struct event *next = event->next;
-            if (event->data)
-                free(event->data);
+            /* Note: Don't free event->data as it may be shared or externally owned */
             free(event);
             event = next;
         }
         free(loop->queue);
     }
     
-    /* Free child loops */
+    /* DON'T recursively destroy children - they should be destroyed separately
+     * to avoid double-free issues. Just clear the child array. */
     for (uint32_t i = 0; i < loop->child_count; i++) {
-        if (loop->children[i])
-            event_loop_destroy(loop->children[i]);
+        if (loop->children[i]) {
+            loop->children[i]->parent = NULL;  /* Clear parent pointer */
+        }
     }
     
     free(loop);
@@ -118,7 +131,7 @@ int event_post(struct event_loop *loop, event_type_t type,
     event->source_prime = source_prime;
     event->data = data;
     event->data_size = data_size;
-    event->timestamp_ns = 0;  /* TODO: Get real timestamp */
+    event->timestamp_ns = event_loop_get_timestamp_ns();
     event->next = NULL;
     
     /* Add to queue tail */
@@ -130,6 +143,15 @@ int event_post(struct event_loop *loop, event_type_t type,
     loop->queue->tail = event;
     loop->queue->count++;
     
+    /* Update statistics */
+    loop->stats.queue_depth_current = loop->queue->count;
+    if (loop->queue->count > loop->stats.queue_depth_max) {
+        loop->stats.queue_depth_max = loop->queue->count;
+    }
+    if (loop->queue->count > loop->queue->max_depth) {
+        loop->queue->max_depth = loop->queue->count;
+    }
+    
     return ECHO_SUCCESS;
 }
 
@@ -137,8 +159,12 @@ int event_post(struct event_loop *loop, event_type_t type,
  * event_process - Process one event
  */
 int event_process(struct event_loop *loop, struct event *event) {
+    uint64_t start_time, end_time, latency;
+    
     if (!loop || !event)
         return ECHO_EINVAL;
+    
+    start_time = event_loop_get_timestamp_ns();
     
     switch (event->type) {
     case EVENT_MEMBRANE_EVOLVE:
@@ -166,7 +192,21 @@ int event_process(struct event_loop *loop, struct event *event) {
         break;
     }
     
-    loop->events_processed++;
+    /* Update statistics */
+    end_time = event_loop_get_timestamp_ns();
+    latency = end_time - start_time;
+    
+    loop->stats.events_processed++;
+    loop->stats.total_latency_ns += latency;
+    
+    if (latency > loop->stats.max_latency_ns) {
+        loop->stats.max_latency_ns = latency;
+    }
+    
+    if (loop->stats.events_processed > 0) {
+        loop->stats.avg_latency_ns = loop->stats.total_latency_ns / loop->stats.events_processed;
+    }
+    
     return ECHO_SUCCESS;
 }
 
@@ -182,6 +222,7 @@ int event_propagate(struct event_loop *loop, struct event *event) {
         if (loop->children[i]) {
             event_post(loop->children[i], event->type,
                       event->source_prime, event->data, event->data_size);
+            loop->stats.events_propagated++;
         }
     }
     
@@ -272,4 +313,32 @@ int event_loop_spawn_children(struct event_loop *parent, uint32_t depth) {
     }
     
     return ECHO_SUCCESS;
+}
+
+/*
+ * event_loop_get_stats - Get event loop statistics
+ */
+int event_loop_get_stats(struct event_loop *loop, struct event_loop_stats *stats_out) {
+    if (!loop || !stats_out)
+        return ECHO_EINVAL;
+    
+    /* Copy current statistics */
+    *stats_out = loop->stats;
+    
+    /* Update current queue depth */
+    if (loop->queue) {
+        stats_out->queue_depth_current = loop->queue->count;
+    }
+    
+    return ECHO_SUCCESS;
+}
+
+/*
+ * event_loop_reset_stats - Reset event loop statistics
+ */
+void event_loop_reset_stats(struct event_loop *loop) {
+    if (!loop)
+        return;
+    
+    memset(&loop->stats, 0, sizeof(loop->stats));
 }

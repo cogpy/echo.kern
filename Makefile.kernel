@@ -55,7 +55,8 @@ TEST_SOURCES = \
     $(TEST_DIR)/test_esn.c \
     $(TEST_DIR)/test_scheduler.c \
     $(TEST_DIR)/test_ggml_backend.c \
-    $(TEST_DIR)/test_bootstrap.c
+    $(TEST_DIR)/test_bootstrap.c \
+    $(TEST_DIR)/test_event_loop_stats.c
 
 # Integration test source files
 INTEGRATION_TEST_DIR = tests/integration
@@ -81,7 +82,8 @@ TEST_EXECUTABLES = \
     $(BUILD_DIR)/test_esn \
     $(BUILD_DIR)/test_scheduler \
     $(BUILD_DIR)/test_ggml_backend \
-    $(BUILD_DIR)/test_bootstrap
+    $(BUILD_DIR)/test_bootstrap \
+    $(BUILD_DIR)/test_event_loop_stats
 
 # Integration test executables
 INTEGRATION_TEST_EXECUTABLES = \
@@ -180,6 +182,10 @@ $(BUILD_DIR)/test_bootstrap: $(TEST_DIR)/test_bootstrap.c kernel/engine/bootstra
 	@echo "CC $@"
 	@$(CC) $(CFLAGS) -Ikernel/include -o $@ $^ $(LDFLAGS)
 
+$(BUILD_DIR)/test_event_loop_stats: $(TEST_DIR)/test_event_loop_stats.c kernel/engine/event_loop.c kernel/engine/hypergraph.c kernel/engine/oeis_table.c
+	@echo "CC $@"
+	@$(CC) $(CFLAGS) -Ikernel/include -o $@ $^ $(LDFLAGS)
+
 # Build integration test executables
 $(BUILD_DIR)/dtesn_integration_suite: $(INTEGRATION_TEST_DIR)/dtesn_integration_suite.c $(DTESN_LIB)
 	@echo "CC $@"
@@ -250,6 +256,10 @@ test-ggml: $(BUILD_DIR)/test_ggml_backend
 
 test-bootstrap: $(BUILD_DIR)/test_bootstrap
 	@echo "🚀 Testing Bootstrap Chain..."
+	@./$<
+
+test-event-loop-stats: $(BUILD_DIR)/test_event_loop_stats
+	@echo "📊 Testing Event Loop Statistics..."
 	@./$<
 
 # Documentation target
