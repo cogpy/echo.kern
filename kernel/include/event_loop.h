@@ -38,6 +38,19 @@ struct event_queue {
     struct event *head;
     struct event *tail;
     uint32_t count;
+    uint32_t max_depth;             /* Maximum queue depth reached */
+};
+
+/* Event loop statistics */
+struct event_loop_stats {
+    uint64_t events_processed;       /* Total events processed */
+    uint64_t events_dropped;         /* Events dropped (queue full, etc) */
+    uint64_t events_propagated;      /* Events propagated to children */
+    uint64_t total_latency_ns;       /* Cumulative event processing latency */
+    uint64_t max_latency_ns;         /* Maximum event latency */
+    uint64_t avg_latency_ns;         /* Average event latency */
+    uint32_t queue_depth_current;    /* Current queue depth */
+    uint32_t queue_depth_max;        /* Maximum queue depth */
 };
 
 /* Event loop */
@@ -61,8 +74,7 @@ struct event_loop {
     uint64_t iteration_count;
     
     /* Statistics */
-    uint64_t events_processed;
-    uint64_t events_dropped;
+    struct event_loop_stats stats;
 };
 
 /* Initialize event loop */
@@ -94,5 +106,14 @@ int event_propagate(struct event_loop *loop, struct event *event);
 
 /* Spawn child event loops recursively (following OEIS A000081) */
 int event_loop_spawn_children(struct event_loop *parent, uint32_t depth);
+
+/* Get event loop statistics */
+int event_loop_get_stats(struct event_loop *loop, struct event_loop_stats *stats_out);
+
+/* Reset event loop statistics */
+void event_loop_reset_stats(struct event_loop *loop);
+
+/* Get current timestamp in nanoseconds (for latency tracking) */
+uint64_t event_loop_get_timestamp_ns(void);
 
 #endif /* _EVENT_LOOP_H */

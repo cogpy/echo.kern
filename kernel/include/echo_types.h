@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 /* OEIS A000081 magic number */
-#define ECHO_MAGIC 0xECH0A00081ULL
+#define ECHO_MAGIC 0xECB0A00081ULL
 
 /* Prime power series types */
 typedef uint64_t prime_t;
