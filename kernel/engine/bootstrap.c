@@ -78,11 +78,17 @@ void stage0_jump_to_stage1(void (*stage1_entry)(void)) {
     
     memset(g_stage1, 0, sizeof(*g_stage1));
     
-    /* Initialize Stage1 */
+    /* Initialize GGML backend first (provides tensor operations) */
+    if (stage1_init_ggml_backend(g_stage1) != ECHO_SUCCESS) {
+        while (1) { __asm__ volatile("hlt"); }
+    }
+    
+    /* Initialize Stage1 membranes */
     if (stage1_init_membranes(g_stage1) != ECHO_SUCCESS) {
         while (1) { __asm__ volatile("hlt"); }
     }
     
+    /* Initialize hypergraph filesystem */
     if (stage1_init_hypergraph_fs(g_stage1) != ECHO_SUCCESS) {
         while (1) { __asm__ volatile("hlt"); }
     }
@@ -107,6 +113,38 @@ void stage0_jump_to_stage1(void (*stage1_entry)(void)) {
     
     /* Never returns */
     while (1) { __asm__ volatile("hlt"); }
+}
+
+/*
+ * stage1_init_ggml_backend - Initialize GGML tensor backend
+ * 
+ * Creates the GGML context that provides tensor operations for
+ * all ENGINE components (ESN reservoirs, B-Series engines, PLN inference).
+ * 
+ * Timing: Must complete within 1ms
+ * Return: 0 on success, negative error code on failure
+ */
+int stage1_init_ggml_backend(struct stage1_bootstrap *stage1) {
+    extern int ggml_backend_init(struct echo_ggml_context **ggml_out,
+                                const struct ggml_backend_config *config);
+    
+    if (!stage1)
+        return ECHO_EINVAL;
+    
+    /* Configure GGML backend for kernel use */
+    struct ggml_backend_config config = {
+        .mem_size = 256 * 1024 * 1024,  /* 256 MB tensor memory */
+        .tensor_alignment = 64,          /* AVX512 alignment */
+        .use_f16 = 0,                    /* FP32 for kernel */
+        .use_quantized = 0,              /* No quantization yet */
+        .num_threads = 4                 /* 4 parallel threads */
+    };
+    
+    /* Initialize GGML context */
+    if (ggml_backend_init(&stage1->ggml, &config) != ECHO_SUCCESS)
+        return ECHO_ENOMEM;
+    
+    return ECHO_SUCCESS;
 }
 
 /*
@@ -158,25 +196,25 @@ int stage1_init_hypergraph_fs(struct stage1_bootstrap *stage1) {
 /*
  * stage1_spawn_kernel_partitions - Spawn kernel partition membranes
  * 
- * Creates 9 kernel partition membranes (OEIS A000081, depth 4) for
+ * Creates 9 kernel partition membranes (OEIS A000081, depth 5) for
  * functional kernel services at security level 0.
  * 
  * Return: 0 on success, negative error code on failure
  */
 int stage1_spawn_kernel_partitions(struct stage1_bootstrap *stage1,
                                    struct stage2_bootstrap *stage2) {
-    extern prime_t nth_prime(size_t n);
-    
     if (!stage1 || !stage2)
         return ECHO_EINVAL;
     
-    /* OEIS A000081: depth 4 = 9 partitions */
-    uint32_t partition_count = oeis_value(4);
+    /* OEIS A000081: depth 5 = 9 partitions */
+    uint32_t partition_count = oeis_value(5);
     
-    for (uint32_t i = 0; i < partition_count; i++) {
-        stage2->partitions[i].prime_id = nth_prime(i + 1);  /* Primes 3, 5, 7, ... */
+    for (uint32_t i = 0; i < partition_count && i < 9; i++) {
+        stage2->partitions[i].prime_id = nth_prime(i + 2);  /* Start from prime 5 (index 2), skip 2 and 3 */
         stage2->partitions[i].security_level = ECHO_LEVEL_KERNEL;
-        /* TODO: Create membranes, ESN, B-Series engines */
+        stage2->partitions[i].partition_membrane = NULL;  /* TODO: Create membranes */
+        stage2->partitions[i].esn_reservoir = NULL;
+        stage2->partitions[i].bseries_engine = NULL;
     }
     
     return ECHO_SUCCESS;

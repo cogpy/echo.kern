@@ -12,6 +12,7 @@
 #include "hypergraph.h"
 #include "membrane.h"
 #include "event_loop.h"
+#include "ggml_backend.h"
 
 /* Stage0: Firmware Bootstrap (Level -3) */
 struct stage0_bootstrap {
@@ -25,13 +26,20 @@ struct stage0_bootstrap {
 struct stage1_bootstrap {
     struct membrane_topology *root;    /* Root membrane (prime 2) */
     struct hypergraph_fs *hgfs;       /* Prime power series filesystem */
+    struct echo_ggml_context *ggml;   /* GGML tensor backend */
     struct event_loop *engine_loop;   /* Master event loop */
     uint32_t context_count;           /* 4 contexts (OEIS A000081) */
 };
 
 /* Stage2: Kernel Partitions (Level 0) */
 struct stage2_bootstrap {
-    struct dtesn_partition partitions[9];  /* 9 partitions (OEIS) */
+    struct dtesn_partition {
+        prime_t prime_id;
+        struct membrane *partition_membrane;
+        void *esn_reservoir;
+        void *bseries_engine;
+        echo_security_level_t security_level;
+    } partitions[9];  /* 9 partitions (OEIS) */
     struct esn_reservoir *reservoirs;
     struct bseries_engine *differential_engines;
 };
@@ -43,14 +51,8 @@ struct stage3_bootstrap {
     uint32_t thread_contexts;         /* 115 (OEIS) */
 };
 
-/* DTESN partition (kernel functional unit) */
-struct dtesn_partition {
-    prime_t prime_id;
-    struct membrane *partition_membrane;
-    void *esn_reservoir;
-    void *bseries_engine;
-    echo_security_level_t security_level;
-};
+/* DTESN partition access helpers */
+#define dtesn_partition struct dtesn_partition
 
 /* Bootstrap functions */
 
@@ -65,6 +67,9 @@ void stage0_jump_to_stage1(void (*stage1_entry)(void)) __attribute__((noreturn))
 
 /* Stage1: Initialize membrane hierarchy */
 int stage1_init_membranes(struct stage1_bootstrap *stage1);
+
+/* Stage1: Initialize GGML tensor backend */
+int stage1_init_ggml_backend(struct stage1_bootstrap *stage1);
 
 /* Stage1: Initialize hypergraph filesystem */
 int stage1_init_hypergraph_fs(struct stage1_bootstrap *stage1);
